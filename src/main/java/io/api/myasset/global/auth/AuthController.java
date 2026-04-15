@@ -1,0 +1,57 @@
+package io.api.myasset.global.auth;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import io.api.myasset.global.auth.AuthService.TokenPair;
+import io.api.myasset.global.auth.cookie.CookieProvider;
+import io.api.myasset.global.auth.dto.LoginRequest;
+import io.api.myasset.global.auth.util.SecurityUtil;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+	private final AuthService authService;
+	private final CookieProvider cookieProvider;
+
+	@PostMapping("/login")
+	public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
+		TokenPair tokenPair = authService.login(request);
+
+		return ResponseEntity.ok()
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPair.accessToken())
+			.header(HttpHeaders.SET_COOKIE, cookieProvider.createRefreshTokenCookie(tokenPair.refreshToken()).toString())
+			.build();
+	}
+
+	@PostMapping("/refresh")
+	public ResponseEntity<Void> refresh(
+		@CookieValue(name = "refresh_token", required = false) String refreshToken
+	) {
+		TokenPair tokenPair = authService.refresh(refreshToken);
+
+		return ResponseEntity.ok()
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPair.accessToken())
+			.header(HttpHeaders.SET_COOKIE, cookieProvider.createRefreshTokenCookie(tokenPair.refreshToken()).toString())
+			.build();
+	}
+
+	@PostMapping("/logout")
+	public ResponseEntity<Void> logout() {
+		authService.logout(SecurityUtil.getCurrentUserId());
+
+		return ResponseEntity.status(HttpStatus.NO_CONTENT)
+			.header(HttpHeaders.SET_COOKIE, cookieProvider.expireRefreshTokenCookie().toString())
+			.build();
+	}
+}
