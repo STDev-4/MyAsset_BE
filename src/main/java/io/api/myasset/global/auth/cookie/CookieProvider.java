@@ -17,7 +17,7 @@ public class CookieProvider {
 	public ResponseCookie createRefreshTokenCookie(String refreshToken) {
 		return ResponseCookie.from("refresh_token", refreshToken)
 			.httpOnly(true)
-			.secure(false) // HTTPS 배포 시 true로 변경
+			.secure(false)
 			.path("/")
 			.maxAge(Duration.ofMillis(jwtProperties.getRefreshTokenExpiry()))
 			.sameSite("Lax")
