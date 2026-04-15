@@ -2,6 +2,20 @@ spring:
   application:
     name: MyAsset
 
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:mysql://localhost:3306/myasset_db}
+    username: ${DATASOURCE_USERNAME:root}
+    password: ${DATASOURCE_PASSWORD}
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
 codef:
   client-id: ${CLIENT_ID}
   client-secret: ${CLIENT_SECRET}

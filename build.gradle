@@ -25,11 +25,15 @@ dependencies {
 
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
     // Jackson & Commons
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.0'
     implementation 'commons-codec:commons-codec:1.19.0'
     implementation 'commons-io:commons-io:2.20.0'
+
+    // SQL
+    runtimeOnly 'com.mysql:mysql-connector-j'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
