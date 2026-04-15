@@ -42,3 +42,7 @@ out/
 ### Claude Code ###
 .claude/
 
+### env ###
+.env
+application-local.yaml
+src/main/resources/application-local.yaml
