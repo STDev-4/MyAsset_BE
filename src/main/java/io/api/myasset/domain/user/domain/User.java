@@ -81,7 +81,7 @@ public class User {
 
 	public List<CodefAccount> getSecuritiesAccounts() {
 		return codefAccounts.stream()
-			.filter(c -> c.getInstitutionType().getCategory() == InstitutionType.Category.SECURITIES)
+			.filter(c -> c.getInstitutionType().getCategory() == InstitutionType.Category.INVEST)
 			.toList();
 	}
 
