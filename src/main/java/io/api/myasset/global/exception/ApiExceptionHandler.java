@@ -12,6 +12,7 @@ import io.api.myasset.global.exception.error.BusinessException;
 import io.api.myasset.global.exception.error.ErrorResponse;
 import io.api.myasset.global.exception.error.ErrorCode;
 import io.api.myasset.global.exception.error.GlobalError;
+import io.codef.api.error.CodefException;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -28,6 +29,12 @@ public class ApiExceptionHandler {
 	@ExceptionHandler(MissingServletRequestParameterException.class)
 	public ErrorResponse handleMissingParameterException() {
 		return new ErrorResponse(GlobalError.MISSING_REQUEST_PARAMETER);
+	}
+
+	@ExceptionHandler(CodefException.class)
+	public ResponseEntity<ErrorResponse> handleCodefException(final CodefException e) {
+		log.error("Codef Error = {} / {}", e.getCodefError().name(), e.getMessage());
+		return convert(GlobalError.INTERNAL_SERVER_ERROR);
 	}
 
 	@ExceptionHandler(BusinessException.class)
