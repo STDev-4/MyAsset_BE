@@ -1,4 +1,4 @@
-package io.api.myasset.domain.user.domain;
+package io.api.myasset.domain.user.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

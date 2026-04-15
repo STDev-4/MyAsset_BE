@@ -1,6 +1,6 @@
 package io.api.myasset.global.auth.dto;
 
-import io.api.myasset.domain.user.domain.InstitutionType;
+import io.api.myasset.domain.user.entity.InstitutionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
