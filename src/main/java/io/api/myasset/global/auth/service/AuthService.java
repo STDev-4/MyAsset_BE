@@ -1,16 +1,23 @@
-package io.api.myasset.global.auth;
+package io.api.myasset.global.auth.service;
+
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.api.myasset.domain.user.domain.CodefAccount;
 import io.api.myasset.domain.user.domain.User;
+import io.api.myasset.global.auth.dto.InstitutionCredential;
+import io.api.myasset.global.auth.dto.SignupRequest;
+import io.api.myasset.global.auth.dto.SignupResponse;
 import io.api.myasset.domain.user.exception.UserError;
 import io.api.myasset.domain.user.repository.UserRepository;
 import io.api.myasset.global.auth.dto.LoginRequest;
 import io.api.myasset.global.auth.jwt.JwtProperties;
 import io.api.myasset.global.auth.jwt.JwtProvider;
 import io.api.myasset.global.auth.redis.RefreshTokenRepository;
+import io.api.myasset.global.codef.CodefConnectedIdService;
 import io.api.myasset.global.exception.error.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +33,43 @@ public class AuthService {
 	private final JwtProvider jwtProvider;
 	private final JwtProperties jwtProperties;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final CodefConnectedIdService codefConnectedIdService;
 
 	public record TokenPair(String accessToken, String refreshToken) {
+	}
+
+	@Transactional
+	public SignupResponse signup(SignupRequest request) {
+		if (userRepository.existsByLoginId(request.loginId())) {
+			throw new BusinessException(UserError.DUPLICATE_LOGIN_ID);
+		}
+		if (userRepository.existsByEmail(request.email())) {
+			throw new BusinessException(UserError.DUPLICATE_EMAIL);
+		}
+
+		User user = User.create(
+			request.loginId(),
+			passwordEncoder.encode(request.password()),
+			request.email(),
+			request.nickname(),
+			request.birthDate()
+		);
+
+		for (InstitutionCredential credential : request.institutions()) {
+			Optional<String> connectedId = codefConnectedIdService.createConnectedId(
+				credential.institutionType(),
+				credential.loginId(),
+				credential.loginPassword()
+			);
+
+			connectedId.ifPresentOrElse(
+				id -> user.addCodefAccount(CodefAccount.create(id, credential.institutionType())),
+				() -> log.warn("[Signup] 기관 연동 건너뜀 - institution={}",
+					credential.institutionType().getDisplayName())
+			);
+		}
+
+		return SignupResponse.from(userRepository.save(user));
 	}
 
 	public TokenPair login(LoginRequest request) {
@@ -41,12 +83,6 @@ public class AuthService {
 		return issueTokens(user);
 	}
 
-	/**
-	 * 리프레시 토큰 갱신 (rotation)
-	 * 1. JWT 서명 검증
-	 * 2. Redis 저장 토큰과 비교
-	 * 3. 신규 토큰 발급 + 기존 토큰 삭제
-	 */
 	@Transactional
 	public TokenPair refresh(String refreshToken) {
 		if (refreshToken == null || refreshToken.isBlank()) {

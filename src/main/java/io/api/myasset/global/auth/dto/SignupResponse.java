@@ -1,4 +1,4 @@
-package io.api.myasset.domain.user.dto.response;
+package io.api.myasset.global.auth.dto;
 
 import java.time.LocalDate;
 import java.util.List;

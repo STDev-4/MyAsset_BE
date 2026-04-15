@@ -1,4 +1,4 @@
-package io.api.myasset.domain.user.dto.request;
+package io.api.myasset.global.auth.dto;
 
 import io.api.myasset.domain.user.domain.InstitutionType;
 import jakarta.validation.constraints.NotBlank;

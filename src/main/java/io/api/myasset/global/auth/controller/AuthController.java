@@ -1,5 +1,6 @@
-package io.api.myasset.global.auth;
+package io.api.myasset.global.auth.controller;
 
+import io.api.myasset.global.auth.service.AuthService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.api.myasset.global.auth.AuthService.TokenPair;
+import io.api.myasset.global.auth.dto.SignupRequest;
+import io.api.myasset.global.auth.dto.SignupResponse;
+import io.api.myasset.global.auth.service.AuthService.TokenPair;
 import io.api.myasset.global.auth.cookie.CookieProvider;
 import io.api.myasset.global.auth.dto.LoginRequest;
 import io.api.myasset.global.auth.util.SecurityUtil;
@@ -23,6 +26,11 @@ public class AuthController {
 
 	private final AuthService authService;
 	private final CookieProvider cookieProvider;
+
+	@PostMapping("/signup")
+	public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+		return ResponseEntity.status(HttpStatus.CREATED).body(authService.signup(request));
+	}
 
 	@PostMapping("/login")
 	public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
