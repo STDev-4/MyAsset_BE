@@ -1,23 +1,18 @@
 package io.api.myasset.global.auth.service;
 
-import java.util.Optional;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.api.myasset.domain.user.domain.CodefAccount;
 import io.api.myasset.domain.user.domain.User;
-import io.api.myasset.global.auth.dto.InstitutionCredential;
-import io.api.myasset.global.auth.dto.SignupRequest;
-import io.api.myasset.global.auth.dto.SignupResponse;
 import io.api.myasset.domain.user.exception.UserError;
 import io.api.myasset.domain.user.repository.UserRepository;
 import io.api.myasset.global.auth.dto.LoginRequest;
+import io.api.myasset.global.auth.dto.SignupRequest;
+import io.api.myasset.global.auth.dto.SignupResponse;
 import io.api.myasset.global.auth.jwt.JwtProperties;
 import io.api.myasset.global.auth.jwt.JwtProvider;
 import io.api.myasset.global.auth.redis.RefreshTokenRepository;
-import io.api.myasset.global.codef.CodefConnectedIdService;
 import io.api.myasset.global.exception.error.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,13 +28,15 @@ public class AuthService {
 	private final JwtProvider jwtProvider;
 	private final JwtProperties jwtProperties;
 	private final RefreshTokenRepository refreshTokenRepository;
-	private final CodefConnectedIdService codefConnectedIdService;
 
 	public record TokenPair(String accessToken, String refreshToken) {
 	}
 
+	public record SignupResult(SignupResponse userInfo, TokenPair tokens) {
+	}
+
 	@Transactional
-	public SignupResponse signup(SignupRequest request) {
+	public SignupResult signup(SignupRequest request) {
 		if (userRepository.existsByLoginId(request.loginId())) {
 			throw new BusinessException(UserError.DUPLICATE_LOGIN_ID);
 		}
@@ -55,21 +52,10 @@ public class AuthService {
 			request.birthDate()
 		);
 
-		for (InstitutionCredential credential : request.institutions()) {
-			Optional<String> connectedId = codefConnectedIdService.createConnectedId(
-				credential.institutionType(),
-				credential.loginId(),
-				credential.loginPassword()
-			);
+		User saved = userRepository.save(user);
+		TokenPair tokens = issueTokens(saved);
 
-			connectedId.ifPresentOrElse(
-				id -> user.addCodefAccount(CodefAccount.create(id, credential.institutionType())),
-				() -> log.warn("[Signup] 기관 연동 건너뜀 - institution={}",
-					credential.institutionType().getDisplayName())
-			);
-		}
-
-		return SignupResponse.from(userRepository.save(user));
+		return new SignupResult(SignupResponse.from(saved), tokens);
 	}
 
 	public TokenPair login(LoginRequest request) {
@@ -89,7 +75,7 @@ public class AuthService {
 			throw new BusinessException(UserError.INVALID_REFRESH_TOKEN);
 		}
 
-		if (!jwtProvider.validateToken(refreshToken)) {
+		if (!jwtProvider.validateToken(refreshToken) || !jwtProvider.isRefreshToken(refreshToken)) {
 			throw new BusinessException(UserError.INVALID_REFRESH_TOKEN);
 		}
 
