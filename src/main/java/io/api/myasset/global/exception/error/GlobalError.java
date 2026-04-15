@@ -25,6 +25,10 @@ public enum GlobalError implements ErrorCode {
 	// 406
 	HTTP_MEDIA_TYPE_NOT_ACCEPTABLE("요청한 미디어 타입을 제공할 수 없습니다.", HttpStatus.NOT_ACCEPTABLE, "G_008"),
 
+	// 401
+	INVALID_TOKEN("유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED, "G_010"),
+	EXPIRED_TOKEN("만료된 액세스 토큰입니다.", HttpStatus.UNAUTHORIZED, "G_011"),
+
 	// 500
 	INTERNAL_SERVER_ERROR("서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR, "G_009");
 
