@@ -7,8 +7,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.api.myasset.domain.user.domain.InstitutionType;
-import io.api.myasset.domain.user.domain.User;
+import io.api.myasset.domain.user.entity.InstitutionType;
+import io.api.myasset.domain.user.entity.User;
 import io.api.myasset.domain.user.exception.UserError;
 import io.api.myasset.domain.user.repository.UserRepository;
 import io.api.myasset.global.auth.dto.InstitutionCredential;

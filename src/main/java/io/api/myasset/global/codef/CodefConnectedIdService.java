@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
-import io.api.myasset.domain.user.domain.InstitutionType;
+import io.api.myasset.domain.user.entity.InstitutionType;
 import io.codef.api.EasyCodefClient;
 import io.codef.api.dto.EasyCodefRequest;
 import io.codef.api.dto.EasyCodefRequestBuilder;

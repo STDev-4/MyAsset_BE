@@ -2,7 +2,7 @@ package io.api.myasset.global.auth.dto;
 
 import java.time.LocalDate;
 
-import io.api.myasset.domain.user.domain.User;
+import io.api.myasset.domain.user.entity.User;
 
 public record SignupResponse(
 	Long userId,

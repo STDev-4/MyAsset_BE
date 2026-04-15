@@ -6,7 +6,7 @@ import javax.crypto.SecretKey;
 
 import org.springframework.stereotype.Component;
 
-import io.api.myasset.domain.user.domain.User;
+import io.api.myasset.domain.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
