@@ -22,8 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CodefConnectedIdService {
 
-	// 계정 관리 API는 /kr prefix 없음 (상품 조회 API와 다름)
 	private static final String ACCOUNT_CREATE_URL = "/v1/account/create";
+	private static final String ACCOUNT_ADD_URL = "/v1/account/add";
 	private static final String SUCCESS_CODE = "CF-00000";
 	private static final String COUNTRY_CODE = "KR";
 	private static final String LOGIN_TYPE_ID_PW = "1";
@@ -31,13 +31,8 @@ public class CodefConnectedIdService {
 	private final EasyCodefClient easyCodefClient;
 
 	/**
-	 * Codef에 기관 계정을 등록하고 커넥티드아이디를 발급받는다.
-	 * 연동 실패 시 empty를 반환하며 회원가입 자체는 중단하지 않는다.
-	 *
-	 * @param institutionType 연동할 기관 유형
-	 * @param loginId         기관 로그인 아이디
-	 * @param loginPassword   기관 로그인 비밀번호 (평문)
-	 * @return 커넥티드아이디 (실패 시 Optional.empty)
+	 * 최초 연동 시 호출. 새 ConnectedId를 발급받는다.
+	 * 실패 시 Optional.empty() 반환.
 	 */
 	public Optional<String> createConnectedId(
 		InstitutionType institutionType,
@@ -45,20 +40,11 @@ public class CodefConnectedIdService {
 		String loginPassword
 	) {
 		try {
-			String encryptedPassword = RsaUtil.encryptRsa(loginPassword, easyCodefClient.getPublicKey());
+			Map<String, Object> params = buildAccountParams(institutionType, loginId, loginPassword);
+			EasyCodefResponse response = requestProduct(ACCOUNT_CREATE_URL, params);
 
-			Map<String, Object> params = buildParams(institutionType, loginId, encryptedPassword);
-
-			EasyCodefRequest request = EasyCodefRequestBuilder.builder()
-				.productUrl(ACCOUNT_CREATE_URL)
-				.parameterMap(params)
-				.build();
-
-			EasyCodefResponse response = easyCodefClient.requestProduct(request);
-			log.info("[Codef] 계정 등록 응답: {}", response);
-
-			if (!SUCCESS_CODE.equals(response.getResult().getCode())) {
-				log.warn("[Codef] 커넥티드아이디 발급 실패 - institution={}, code={}, message={}",
+			if (!isSuccess(response)) {
+				log.warn("[Codef] CID 발급 실패 - institution={}, code={}, message={}",
 					institutionType.getDisplayName(),
 					response.getResult().getCode(),
 					response.getResult().getMessage());
@@ -68,17 +54,52 @@ public class CodefConnectedIdService {
 			return extractConnectedId(response.getData());
 
 		} catch (Exception e) {
-			log.warn("[Codef] 커넥티드아이디 발급 중 예외 발생 - institution={}, reason={}",
+			log.warn("[Codef] CID 발급 중 예외 발생 - institution={}, reason={}",
 				institutionType.getDisplayName(), e.getMessage());
 			return Optional.empty();
 		}
 	}
 
-	private Map<String, Object> buildParams(
+	/**
+	 * 기존 ConnectedId에 기관을 추가한다.
+	 * 실패 시 false 반환.
+	 */
+	public boolean addAccount(
+		String connectedId,
 		InstitutionType institutionType,
 		String loginId,
-		String encryptedPassword
+		String loginPassword
 	) {
+		try {
+			Map<String, Object> params = buildAccountParams(institutionType, loginId, loginPassword);
+			params.put("connectedId", connectedId);
+
+			EasyCodefResponse response = requestProduct(ACCOUNT_ADD_URL, params);
+
+			if (!isSuccess(response)) {
+				log.warn("[Codef] 계정 추가 실패 - institution={}, code={}, message={}",
+					institutionType.getDisplayName(),
+					response.getResult().getCode(),
+					response.getResult().getMessage());
+				return false;
+			}
+
+			return true;
+
+		} catch (Exception e) {
+			log.warn("[Codef] 계정 추가 중 예외 발생 - institution={}, reason={}",
+				institutionType.getDisplayName(), e.getMessage());
+			return false;
+		}
+	}
+
+	private Map<String, Object> buildAccountParams(
+		InstitutionType institutionType,
+		String loginId,
+		String loginPassword
+	) throws Exception {
+		String encryptedPassword = RsaUtil.encryptRsa(loginPassword, easyCodefClient.getPublicKey());
+
 		Map<String, Object> account = new HashMap<>();
 		account.put("countryCode", COUNTRY_CODE);
 		account.put("businessType", institutionType.getCodefBusinessType());
@@ -96,26 +117,24 @@ public class CodefConnectedIdService {
 		return params;
 	}
 
-	/**
-	 * 응답 data 구조: {"successList": [{"connectedId": "...", ...}], "failList": [...]}
-	 */
-	@SuppressWarnings("unchecked")
+	private EasyCodefResponse requestProduct(String url, Map<String, Object> params) {
+		EasyCodefRequest request = EasyCodefRequestBuilder.builder()
+			.productUrl(url)
+			.parameterMap(params)
+			.build();
+		return easyCodefClient.requestProduct(request);
+	}
+
+	private boolean isSuccess(EasyCodefResponse response) {
+		return SUCCESS_CODE.equals(response.getResult().getCode());
+	}
+
 	private Optional<String> extractConnectedId(Object data) {
 		if (!(data instanceof Map<?, ?> dataMap)) {
 			return Optional.empty();
 		}
 
-		Object successListRaw = dataMap.get("successList");
-		if (!(successListRaw instanceof List<?> successList) || successList.isEmpty()) {
-			return Optional.empty();
-		}
-
-		Object first = successList.get(0);
-		if (!(first instanceof Map<?, ?> firstMap)) {
-			return Optional.empty();
-		}
-
-		Object connectedId = firstMap.get("connectedId");
+		Object connectedId = dataMap.get("connectedId");
 		if (connectedId instanceof String id && !id.isBlank()) {
 			return Optional.of(id);
 		}

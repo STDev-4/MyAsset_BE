@@ -7,7 +7,6 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.api.myasset.domain.user.domain.CodefAccount;
 import io.api.myasset.domain.user.domain.InstitutionType;
 import io.api.myasset.domain.user.domain.User;
 import io.api.myasset.domain.user.exception.UserError;
@@ -29,8 +28,9 @@ public class CodefLinkService {
 	private final CodefConnectedIdService codefConnectedIdService;
 
 	/**
-	 * 인증된 사용자의 금융기관 계정을 Codef에 연동한다.
-	 * 연동에 성공한 기관은 CodefAccount로 저장하고, 실패한 기관은 failed 목록으로 반환한다.
+	 * 유저당 ConnectedId는 1개.
+	 * - CID 없음: /v1/account/create → CID 발급 후 User에 저장
+	 * - CID 있음: /v1/account/add   → 기존 CID에 기관 추가
 	 */
 	@Transactional
 	public CodefLinkResponse link(Long userId, CodefLinkRequest request) {
@@ -41,14 +41,10 @@ public class CodefLinkService {
 		List<InstitutionType> failed = new ArrayList<>();
 
 		for (InstitutionCredential credential : request.institutions()) {
-			Optional<String> connectedId = codefConnectedIdService.createConnectedId(
-				credential.institutionType(),
-				credential.loginId(),
-				credential.loginPassword()
-			);
+			boolean success = linkInstitution(user, credential);
 
-			if (connectedId.isPresent()) {
-				user.addCodefAccount(CodefAccount.create(connectedId.get(), credential.institutionType()));
+			if (success) {
+				user.addLinkedInstitution(credential.institutionType());
 				linked.add(credential.institutionType());
 			} else {
 				log.warn("[CodefLink] 기관 연동 실패 - userId={}, institution={}",
@@ -58,5 +54,25 @@ public class CodefLinkService {
 		}
 
 		return new CodefLinkResponse(linked, failed);
+	}
+
+	private boolean linkInstitution(User user, InstitutionCredential credential) {
+		if (!user.hasConnectedId()) {
+			Optional<String> connectedId = codefConnectedIdService.createConnectedId(
+				credential.institutionType(),
+				credential.loginId(),
+				credential.loginPassword()
+			);
+
+			connectedId.ifPresent(user::assignConnectedId);
+			return connectedId.isPresent();
+		}
+
+		return codefConnectedIdService.addAccount(
+			user.getConnectedId(),
+			credential.institutionType(),
+			credential.loginId(),
+			credential.loginPassword()
+		);
 	}
 }

@@ -8,13 +8,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -50,9 +53,15 @@ public class User {
 	@Column(nullable = false)
 	private LocalDate birthDate;
 
+	@Column
+	private String connectedId;
+
 	@Builder.Default
-	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-	private List<CodefAccount> codefAccounts = new ArrayList<>();
+	@ElementCollection
+	@Enumerated(EnumType.STRING)
+	@CollectionTable(name = "user_linked_institutions", joinColumns = @JoinColumn(name = "user_id"))
+	@Column(name = "institution_type", nullable = false)
+	private List<InstitutionType> linkedInstitutions = new ArrayList<>();
 
 	public static User create(
 		String loginId,
@@ -74,26 +83,33 @@ public class User {
 		return passwordEncoder.matches(rawPassword, this.password);
 	}
 
-	public void addCodefAccount(CodefAccount codefAccount) {
-		codefAccounts.add(codefAccount);
-		codefAccount.assignUser(this);
+	public boolean hasConnectedId() {
+		return this.connectedId != null;
 	}
 
-	public List<CodefAccount> getSecuritiesAccounts() {
-		return codefAccounts.stream()
-			.filter(c -> c.getInstitutionType().getCategory() == InstitutionType.Category.INVEST)
+	public void assignConnectedId(String connectedId) {
+		this.connectedId = connectedId;
+	}
+
+	public void addLinkedInstitution(InstitutionType institutionType) {
+		linkedInstitutions.add(institutionType);
+	}
+
+	public List<InstitutionType> getSecuritiesInstitutions() {
+		return linkedInstitutions.stream()
+			.filter(t -> t.getCategory() == InstitutionType.Category.INVEST)
 			.toList();
 	}
 
-	public List<CodefAccount> getBankAccounts() {
-		return codefAccounts.stream()
-			.filter(c -> c.getInstitutionType().getCategory() == InstitutionType.Category.BANK)
+	public List<InstitutionType> getBankInstitutions() {
+		return linkedInstitutions.stream()
+			.filter(t -> t.getCategory() == InstitutionType.Category.BANK)
 			.toList();
 	}
 
-	public List<CodefAccount> getCardAccounts() {
-		return codefAccounts.stream()
-			.filter(c -> c.getInstitutionType().getCategory() == InstitutionType.Category.CARD)
+	public List<InstitutionType> getCardInstitutions() {
+		return linkedInstitutions.stream()
+			.filter(t -> t.getCategory() == InstitutionType.Category.CARD)
 			.toList();
 	}
 }
