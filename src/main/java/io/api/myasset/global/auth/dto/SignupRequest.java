@@ -1,9 +1,7 @@
 package io.api.myasset.global.auth.dto;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,14 +27,6 @@ public record SignupRequest(
 
 	@NotNull(message = "생년월일은 필수입니다.")
 	@Past(message = "생년월일은 과거 날짜여야 합니다.")
-	LocalDate birthDate,
-
-	@Valid
-	List<InstitutionCredential> institutions
+	LocalDate birthDate
 ) {
-	public SignupRequest {
-		if (institutions == null) {
-			institutions = List.of();
-		}
-	}
 }
