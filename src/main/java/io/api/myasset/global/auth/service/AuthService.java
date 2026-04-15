@@ -75,7 +75,7 @@ public class AuthService {
 			throw new BusinessException(UserError.INVALID_REFRESH_TOKEN);
 		}
 
-		if (!jwtProvider.validateToken(refreshToken)) {
+		if (!jwtProvider.validateToken(refreshToken) || !jwtProvider.isRefreshToken(refreshToken)) {
 			throw new BusinessException(UserError.INVALID_REFRESH_TOKEN);
 		}
 
