@@ -13,7 +13,7 @@ public enum UserTier {
 	RESEARCHER(4, "연구원 리그"),
 	MASTER(5, "마스터 리그");
 
-	private final int order;    // 정렬용
+	private final int order; // 정렬용
 	private final String label; // 화면 표시용 (DB 저장 금지)
 
 	public UserTier next() {

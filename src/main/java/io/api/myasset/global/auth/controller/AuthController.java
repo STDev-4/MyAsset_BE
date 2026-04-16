@@ -29,34 +29,39 @@ public class AuthController {
 	private final CookieProvider cookieProvider;
 
 	@PostMapping("/signup")
-	public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+	public ResponseEntity<SignupResponse> signup(@Valid @RequestBody
+	SignupRequest request) {
 		SignupResult result = authService.signup(request);
 
 		return ResponseEntity.status(HttpStatus.CREATED)
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + result.tokens().accessToken())
-			.header(HttpHeaders.SET_COOKIE, cookieProvider.createRefreshTokenCookie(result.tokens().refreshToken()).toString())
+			.header(HttpHeaders.SET_COOKIE,
+				cookieProvider.createRefreshTokenCookie(result.tokens().refreshToken()).toString())
 			.body(result.userInfo());
 	}
 
 	@PostMapping("/login")
-	public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
+	public ResponseEntity<Void> login(@Valid @RequestBody
+	LoginRequest request) {
 		TokenPair tokenPair = authService.login(request);
 
 		return ResponseEntity.ok()
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPair.accessToken())
-			.header(HttpHeaders.SET_COOKIE, cookieProvider.createRefreshTokenCookie(tokenPair.refreshToken()).toString())
+			.header(HttpHeaders.SET_COOKIE,
+				cookieProvider.createRefreshTokenCookie(tokenPair.refreshToken()).toString())
 			.build();
 	}
 
 	@PostMapping("/refresh")
 	public ResponseEntity<Void> refresh(
-		@CookieValue(name = "refresh_token", required = false) String refreshToken
-	) {
+		@CookieValue(name = "refresh_token", required = false)
+		String refreshToken) {
 		TokenPair tokenPair = authService.refresh(refreshToken);
 
 		return ResponseEntity.ok()
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenPair.accessToken())
-			.header(HttpHeaders.SET_COOKIE, cookieProvider.createRefreshTokenCookie(tokenPair.refreshToken()).toString())
+			.header(HttpHeaders.SET_COOKIE,
+				cookieProvider.createRefreshTokenCookie(tokenPair.refreshToken()).toString())
 			.build();
 	}
 

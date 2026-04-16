@@ -4,14 +4,12 @@ import java.util.List;
 
 public record LeagueRankingResponse(
 	String tier,
-	List<RankingEntry> rankings
-) {
+	List<RankingEntry> rankings) {
 	public record RankingEntry(
 		int rank,
 		Long userId,
 		String nickname,
 		int point,
-		String activeCharacterImageUrl
-	) {
+		String activeCharacterImageUrl) {
 	}
 }

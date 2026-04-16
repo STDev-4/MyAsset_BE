@@ -9,15 +9,13 @@ public record SignupResponse(
 	String loginId,
 	String email,
 	String nickname,
-	LocalDate birthDate
-) {
+	LocalDate birthDate) {
 	public static SignupResponse from(User user) {
 		return new SignupResponse(
 			user.getId(),
 			user.getLoginId(),
 			user.getEmail(),
 			user.getNickname(),
-			user.getBirthDate()
-		);
+			user.getBirthDate());
 	}
 }

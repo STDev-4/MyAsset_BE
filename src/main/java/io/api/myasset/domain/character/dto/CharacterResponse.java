@@ -9,8 +9,7 @@ public record CharacterResponse(
 	String imageUrl,
 	int coinPrice,
 	boolean owned,
-	boolean active
-) {
+	boolean active) {
 	public static CharacterResponse ofOwned(UserCharacter userCharacter) {
 		Character character = userCharacter.getCharacter();
 		return new CharacterResponse(
@@ -19,8 +18,7 @@ public record CharacterResponse(
 			character.getImageUrl(),
 			character.getCoinPrice(),
 			true,
-			userCharacter.isActive()
-		);
+			userCharacter.isActive());
 	}
 
 	public static CharacterResponse ofUnowned(Character character) {
@@ -30,7 +28,6 @@ public record CharacterResponse(
 			character.getImageUrl(),
 			character.getCoinPrice(),
 			false,
-			false
-		);
+			false);
 	}
 }

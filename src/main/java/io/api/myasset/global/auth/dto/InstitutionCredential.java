@@ -12,6 +12,5 @@ public record InstitutionCredential(
 	String loginId,
 
 	@NotBlank(message = "기관 로그인 비밀번호는 필수입니다.")
-	String loginPassword
-) {
+	String loginPassword) {
 }

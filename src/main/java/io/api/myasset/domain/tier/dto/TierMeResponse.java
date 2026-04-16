@@ -7,8 +7,8 @@ public record TierMeResponse(
 	String tier,
 	String tierLabel,
 	int point,
-	String nextTier,      // null이면 최고 티어
-	String nextTierLabel  // null이면 최고 티어
+	String nextTier, // null이면 최고 티어
+	String nextTierLabel // null이면 최고 티어
 ) {
 	public static TierMeResponse from(User user) {
 		UserTier current = user.getTier();
@@ -18,7 +18,6 @@ public record TierMeResponse(
 			current.getLabel(),
 			user.getPoint(),
 			next != null ? next.name() : null,
-			next != null ? next.getLabel() : null
-		);
+			next != null ? next.getLabel() : null);
 	}
 }

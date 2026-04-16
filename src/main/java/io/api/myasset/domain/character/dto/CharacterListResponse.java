@@ -4,6 +4,5 @@ import java.util.List;
 
 public record CharacterListResponse(
 	List<CharacterResponse> characters,
-	int coin
-) {
+	int coin) {
 }

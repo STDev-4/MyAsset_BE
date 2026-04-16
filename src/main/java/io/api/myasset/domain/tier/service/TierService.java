@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import io.api.myasset.domain.character.entity.UserCharacter;
 import io.api.myasset.domain.character.repository.UserCharacterRepository;
 import io.api.myasset.domain.tier.dto.LeagueRankingResponse;
 import io.api.myasset.domain.tier.dto.LeagueRankingResponse.RankingEntry;
@@ -47,8 +46,7 @@ public class TierService {
 			.stream()
 			.collect(Collectors.toMap(
 				uc -> uc.getUser().getId(),
-				uc -> uc.getCharacter().getImageUrl()
-			));
+				uc -> uc.getCharacter().getImageUrl()));
 
 		List<RankingEntry> rankings = new ArrayList<>();
 		for (int i = 0; i < users.size(); i++) {
@@ -58,8 +56,7 @@ public class TierService {
 				user.getId(),
 				user.getNickname(),
 				user.getPoint(),
-				activeImageMap.get(user.getId())
-			));
+				activeImageMap.get(user.getId())));
 		}
 
 		return new LeagueRankingResponse(tier.name(), rankings);

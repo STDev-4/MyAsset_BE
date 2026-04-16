@@ -33,7 +33,8 @@ public class CharacterController {
 
 	/** 캐릭터 해금 - 코인 차감 후 보유 목록 추가 */
 	@PostMapping("/{id}/unlock")
-	public ResponseEntity<Void> unlockCharacter(@PathVariable Long id) {
+	public ResponseEntity<Void> unlockCharacter(@PathVariable
+	Long id) {
 		Long userId = SecurityUtil.getCurrentUserId();
 		characterService.unlockCharacter(userId, id);
 		return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -41,7 +42,8 @@ public class CharacterController {
 
 	/** 활성 캐릭터 변경 - 보유 중인 캐릭터로만 변경 가능 */
 	@PatchMapping("/active")
-	public ResponseEntity<Void> changeActiveCharacter(@Valid @RequestBody ActiveCharacterRequest request) {
+	public ResponseEntity<Void> changeActiveCharacter(@Valid @RequestBody
+	ActiveCharacterRequest request) {
 		Long userId = SecurityUtil.getCurrentUserId();
 		characterService.changeActiveCharacter(userId, request);
 		return ResponseEntity.ok().build();

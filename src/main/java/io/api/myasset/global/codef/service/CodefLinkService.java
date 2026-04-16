@@ -61,8 +61,7 @@ public class CodefLinkService {
 			Optional<String> connectedId = codefConnectedIdService.createConnectedId(
 				credential.institutionType(),
 				credential.loginId(),
-				credential.loginPassword()
-			);
+				credential.loginPassword());
 
 			connectedId.ifPresent(user::assignConnectedId);
 			return connectedId.isPresent();
@@ -72,7 +71,6 @@ public class CodefLinkService {
 			user.getConnectedId(),
 			credential.institutionType(),
 			credential.loginId(),
-			credential.loginPassword()
-		);
+			credential.loginPassword());
 	}
 }

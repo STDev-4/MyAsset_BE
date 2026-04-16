@@ -28,7 +28,8 @@ public class TierController {
 
 	/** 티어별 리그 랭킹 조회 */
 	@GetMapping("/leagues/{tierId}")
-	public ResponseEntity<LeagueRankingResponse> getLeagueRanking(@PathVariable String tierId) {
+	public ResponseEntity<LeagueRankingResponse> getLeagueRanking(@PathVariable
+	String tierId) {
 		return ResponseEntity.ok(tierService.getLeagueRanking(tierId));
 	}
 }

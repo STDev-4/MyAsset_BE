@@ -35,20 +35,16 @@ public class SecurityConfig {
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
 			.csrf(AbstractHttpConfigurer::disable)
-			.sessionManagement(session ->
-				session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
 				.requestMatchers("/api/auth/logout").authenticated()
-				.anyRequest().authenticated()
-			)
+				.anyRequest().authenticated())
 			.formLogin(form -> form.disable())
 			.httpBasic(basic -> basic.disable())
 			.exceptionHandling(exception -> exception
-				.authenticationEntryPoint((request, response, ex) ->
-					errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED, GlobalError.INVALID_TOKEN)
-				)
-			)
+				.authenticationEntryPoint((request, response, ex) -> errorResponseWriter.write(response,
+					HttpStatus.UNAUTHORIZED, GlobalError.INVALID_TOKEN)))
 			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(apiExceptionHandlingFilter, JwtAuthenticationFilter.class);
 		return http.build();

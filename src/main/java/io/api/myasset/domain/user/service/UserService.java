@@ -32,8 +32,7 @@ public class UserService {
 			.map(character -> new ActiveCharacterInfo(
 				character.getId(),
 				character.getName(),
-				character.getImageUrl()
-			))
+				character.getImageUrl()))
 			.orElse(null);
 
 		return UserMeResponse.of(user, activeCharacter);

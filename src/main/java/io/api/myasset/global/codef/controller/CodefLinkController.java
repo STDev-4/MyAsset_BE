@@ -21,7 +21,8 @@ public class CodefLinkController {
 	private final CodefLinkService codefLinkService;
 
 	@PostMapping("/link")
-	public ResponseEntity<CodefLinkResponse> link(@Valid @RequestBody CodefLinkRequest request) {
+	public ResponseEntity<CodefLinkResponse> link(@Valid @RequestBody
+	CodefLinkRequest request) {
 		CodefLinkResponse response = codefLinkService.link(SecurityUtil.getCurrentUserId(), request);
 		return ResponseEntity.ok(response);
 	}

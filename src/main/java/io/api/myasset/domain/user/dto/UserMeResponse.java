@@ -7,13 +7,11 @@ public record UserMeResponse(
 	String tier,
 	int point,
 	int coin,
-	ActiveCharacterInfo activeCharacter
-) {
+	ActiveCharacterInfo activeCharacter) {
 	public record ActiveCharacterInfo(
 		Long id,
 		String name,
-		String imageUrl
-	) {
+		String imageUrl) {
 	}
 
 	public static UserMeResponse of(User user, ActiveCharacterInfo activeCharacter) {
@@ -22,7 +20,6 @@ public record UserMeResponse(
 			user.getTier().name(),
 			user.getPoint(),
 			user.getCoin(),
-			activeCharacter
-		);
+			activeCharacter);
 	}
 }

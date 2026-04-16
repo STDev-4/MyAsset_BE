@@ -6,6 +6,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record S3Properties(
 	boolean enabled,
 	String bucket,
-	String region
-) {
+	String region) {
 }

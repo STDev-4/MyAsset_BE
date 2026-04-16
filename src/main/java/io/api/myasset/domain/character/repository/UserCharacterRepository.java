@@ -21,5 +21,6 @@ public interface UserCharacterRepository extends JpaRepository<UserCharacter, Lo
 
 	/** 리그 랭킹 조회용 - N+1 방지 배치 쿼리 */
 	@Query("SELECT uc FROM UserCharacter uc JOIN FETCH uc.character WHERE uc.user.id IN :userIds AND uc.active = true")
-	List<UserCharacter> findActiveByUserIds(@Param("userIds") List<Long> userIds);
+	List<UserCharacter> findActiveByUserIds(@Param("userIds")
+	List<Long> userIds);
 }
