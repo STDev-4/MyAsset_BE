@@ -30,3 +30,9 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-expiry: 1800000    # 30분 (ms)
   refresh-token-expiry: 604800000 # 7일 (ms)
+
+aws:
+  s3:
+    enabled: ${AWS_S3_ENABLED:true} # local에서는 false로 변경 바람
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_S3_REGION}
