@@ -23,41 +23,41 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-	private static final String AUTHORIZATION_HEADER = "Authorization";
-	private static final String BEARER_PREFIX = "Bearer ";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
 
-	private final JwtProvider jwtProvider;
+    private final JwtProvider jwtProvider;
 
-	@Override
-	protected void doFilterInternal(
-		final @NonNull HttpServletRequest request,
-		final @NonNull HttpServletResponse response,
-		final @NonNull FilterChain filterChain
-	) throws ServletException, IOException {
-		try {
-			String token = extractToken(request);
+    @Override
+    protected void doFilterInternal(
+            final @NonNull HttpServletRequest request,
+            final @NonNull HttpServletResponse response,
+            final @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
+        try {
+            String token = extractToken(request);
 
-			if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
-				Long userId = jwtProvider.getUserIdFromToken(token);
+            if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
+                Long userId = jwtProvider.getUserIdFromToken(token);
 
-				UsernamePasswordAuthenticationToken authentication =
-					new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userId, null, List.of());
 
-				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-				SecurityContextHolder.getContext().setAuthentication(authentication);
-			}
-		} catch (Exception e) {
-			log.error("JWT 인증 실패 - {}", e.getMessage());
-		}
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception e) {
+            log.error("JWT 인증 실패 - {}", e.getMessage());
+        }
 
-		filterChain.doFilter(request, response);
-	}
+        filterChain.doFilter(request, response);
+    }
 
-	private String extractToken(HttpServletRequest request) {
-		String bearer = request.getHeader(AUTHORIZATION_HEADER);
-		if (StringUtils.hasText(bearer) && bearer.startsWith(BEARER_PREFIX)) {
-			return bearer.substring(BEARER_PREFIX.length());
-		}
-		return null;
-	}
+    private String extractToken(HttpServletRequest request) {
+        String bearer = request.getHeader(AUTHORIZATION_HEADER);
+        if (StringUtils.hasText(bearer) && bearer.startsWith(BEARER_PREFIX)) {
+            return bearer.substring(BEARER_PREFIX.length());
+        }
+        return null;
+    }
 }

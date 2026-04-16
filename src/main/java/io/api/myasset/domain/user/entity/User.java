@@ -1,6 +1,7 @@
 package io.api.myasset.domain.user.entity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,6 +57,25 @@ public class User {
 	@Column
 	private String connectedId;
 
+    //사용자 캐릭터 url
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
+
+    // 포인트
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer point = 0;
+
+    //마지막 접속 시간
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
+    //유저의 티어
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserTier tier = UserTier.SEED;
+
 	@Builder.Default
 	@ElementCollection
 	@Enumerated(EnumType.STRING)
@@ -79,7 +99,12 @@ public class User {
 			.build();
 	}
 
-	public boolean matchesPassword(String rawPassword, PasswordEncoder passwordEncoder) {
+    // 마지막 로그인 시간 업데이트
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
+    public boolean matchesPassword(String rawPassword, PasswordEncoder passwordEncoder) {
 		return passwordEncoder.matches(rawPassword, this.password);
 	}
 
