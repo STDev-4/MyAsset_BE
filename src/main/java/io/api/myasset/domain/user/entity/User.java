@@ -7,11 +7,13 @@ import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import io.api.myasset.domain.character.entity.UserCharacter;
 import io.api.myasset.domain.character.exception.CharacterError;
 import io.api.myasset.global.exception.error.BusinessException;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -22,6 +24,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.AccessLevel;
@@ -69,7 +72,7 @@ public class User {
 	@Column
 	private String connectedId;
 
-@Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+	@Column(nullable = false, columnDefinition = "INT DEFAULT 0")
 	@Builder.Default
 	private Integer point = 0;
 
@@ -86,6 +89,10 @@ public class User {
 	private UserTier tier = UserTier.SEED;
 
 	@Builder.Default
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<UserCharacter> userCharacters = new ArrayList<>();
+
+	@Builder.Default
 	@ElementCollection
 	@Enumerated(EnumType.STRING)
 	@CollectionTable(name = "user_linked_institutions", joinColumns = @JoinColumn(name = "user_id"))
@@ -97,8 +104,7 @@ public class User {
 		String encodedPassword,
 		String email,
 		String nickname,
-		LocalDate birthDate
-	) {
+		LocalDate birthDate) {
 		return User.builder()
 			.loginId(loginId)
 			.password(encodedPassword)

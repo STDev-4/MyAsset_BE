@@ -20,13 +20,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-	name = "user_characters",
-	uniqueConstraints = @UniqueConstraint(
-		name = "uk_user_character",
-		columnNames = {"user_id", "character_id"}
-	)
-)
+@Table(name = "user_characters", uniqueConstraints = @UniqueConstraint(name = "uk_user_character", columnNames = {
+	"user_id", "character_id"}))
 @Getter
 @Builder(access = AccessLevel.PRIVATE)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
