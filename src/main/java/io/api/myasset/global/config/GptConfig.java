@@ -8,7 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
-public class WebClientConfig {
+public class GptConfig {
     @Bean
     WebClient gptWebClient(
             @Value("${openai.url}") String baseUrl,
