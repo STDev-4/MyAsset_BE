@@ -15,24 +15,26 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LeagueController {
 
-    private final LeagueService leagueService;
+	private final LeagueService leagueService;
 
-    // 리그 랭킹 조회 API
-    @GetMapping("/api/league/ranking")
-    public LeagueRankingResponse getLeagueRanking(
-            @RequestHeader("userId") Long userId,
-            @RequestParam(defaultValue = "10") int size
-    ) {
+	// 리그 랭킹 조회 API
+	@GetMapping("/api/league/ranking")
+	public LeagueRankingResponse getLeagueRanking(
+		@RequestHeader("userId")
+		Long userId,
+		@RequestParam(defaultValue = "10")
+		int size) {
 
-        return leagueService.getLeagueRanking(userId, size);
-    }
+		return leagueService.getLeagueRanking(userId, size);
+	}
 
-    // 선택한 리그 랭킹 조회
-    @GetMapping("/api/league/selected")
-    public LeagueSelectedRankingResponse getLeagueSelectedRanking(
-            @RequestParam UserTier tier,
-            @RequestParam(defaultValue = "50") int size
-    ) {
-        return leagueService.getLeagueSelectedRanking(tier, size);
-    }
+	// 선택한 리그 랭킹 조회
+	@GetMapping("/api/league/selected")
+	public LeagueSelectedRankingResponse getLeagueSelectedRanking(
+		@RequestParam
+		UserTier tier,
+		@RequestParam(defaultValue = "50")
+		int size) {
+		return leagueService.getLeagueSelectedRanking(tier, size);
+	}
 }

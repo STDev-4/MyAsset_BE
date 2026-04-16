@@ -7,10 +7,10 @@ import lombok.Getter;
 @Getter
 @Builder
 public class LeagueRankingUserResponse {
-    private Integer rank;
-    private String nickname;
-    private String profileImageUrl;
-    private Integer point;
-    private String lastLoginAt;
-    private Boolean isActive;
+	private Integer rank;
+	private String nickname;
+	private String profileImageUrl;
+	private Integer point;
+	private String lastLoginAt;
+	private Boolean isActive;
 }

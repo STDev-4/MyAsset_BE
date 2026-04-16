@@ -22,35 +22,33 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final ApiExceptionHandlingFilter apiExceptionHandlingFilter;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final ErrorResponseWriter errorResponseWriter;
+	private final ApiExceptionHandlingFilter apiExceptionHandlingFilter;
+	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final ErrorResponseWriter errorResponseWriter;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/actuator/health", "/swagger-ui/**","/swagger-ui.html","/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/auth/logout").authenticated()
-                        .anyRequest().authenticated()
-                )
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable())
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response, ex) ->
-                                errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED, GlobalError.INVALID_TOKEN)
-                        )
-                )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(apiExceptionHandlingFilter, JwtAuthenticationFilter.class);
-        return http.build();
-    }
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		http
+			.csrf(AbstractHttpConfigurer::disable)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+			.authorizeHttpRequests(auth -> auth
+				.requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/actuator/health",
+					"/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+				.permitAll()
+				.requestMatchers("/api/auth/logout").authenticated()
+				.anyRequest().authenticated())
+			.formLogin(form -> form.disable())
+			.httpBasic(basic -> basic.disable())
+			.exceptionHandling(exception -> exception
+				.authenticationEntryPoint((request, response, ex) -> errorResponseWriter.write(response,
+					HttpStatus.UNAUTHORIZED, GlobalError.INVALID_TOKEN)))
+			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+			.addFilterBefore(apiExceptionHandlingFilter, JwtAuthenticationFilter.class);
+		return http.build();
+	}
 }

@@ -17,9 +17,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	Optional<User> findByLoginId(String loginId);
 
-    // 특정 티어 사용자 수 조회
-    long countByTier(UserTier tier);
+	// 특정 티어 사용자 수 조회
+	long countByTier(UserTier tier);
 
-    // 티어 기준 랭킹 조회 (페이징)
-    List<User> findAllByTierOrderByPointDesc(UserTier tier, Pageable pageable);
+	// 티어 기준 랭킹 조회 (페이징)
+	List<User> findAllByTierOrderByPointDesc(UserTier tier, Pageable pageable);
+
+	// 현재 유저보다 point가 높은 유저 수 조회
+	long countByPointGreaterThan(Integer point);
 }

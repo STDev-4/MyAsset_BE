@@ -9,7 +9,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class LeagueSelectedRankingResponse {
-    private String remainingTime;
-    private Integer totalUserCount;
-    private List<LeagueRankingUserResponse> rankings;
+	private String remainingTime;
+	private Integer totalUserCount;
+	private List<LeagueRankingUserResponse> rankings;
 }

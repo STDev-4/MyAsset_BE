@@ -12,27 +12,27 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 @Configuration
 public class SwaggerConfig {
 
-    private static final String bearerSchemeName = "bearerAuth";
+	private static final String bearerSchemeName = "bearerAuth";
 
-    @Bean
-    public OpenAPI openAPI() {
-        SecurityScheme securityScheme = new SecurityScheme()
-                .type(SecurityScheme.Type.HTTP)
-                .scheme("bearer")
-                .bearerFormat("JWT")
-                .in(SecurityScheme.In.HEADER)
-                .name("Authorization");
+	@Bean
+	public OpenAPI openAPI() {
+		SecurityScheme securityScheme = new SecurityScheme()
+			.type(SecurityScheme.Type.HTTP)
+			.scheme("bearer")
+			.bearerFormat("JWT")
+			.in(SecurityScheme.In.HEADER)
+			.name("Authorization");
 
-        SecurityRequirement securityRequirement = new SecurityRequirement()
-                .addList(bearerSchemeName);
+		SecurityRequirement securityRequirement = new SecurityRequirement()
+			.addList(bearerSchemeName);
 
-        return new OpenAPI()
-                .info(new Info()
-                        .title("MyAsset API")
-                        .version("v1")
-                        .description("MyAsset Swagger API Docs"))
-                .components(new Components()
-                        .addSecuritySchemes(bearerSchemeName, securityScheme))
-                .addSecurityItem(securityRequirement);
-    }
+		return new OpenAPI()
+			.info(new Info()
+				.title("MyAsset API")
+				.version("v1")
+				.description("MyAsset Swagger API Docs"))
+			.components(new Components()
+				.addSecuritySchemes(bearerSchemeName, securityScheme))
+			.addSecurityItem(securityRequirement);
+	}
 }

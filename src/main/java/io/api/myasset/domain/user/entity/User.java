@@ -57,24 +57,24 @@ public class User {
 	@Column
 	private String connectedId;
 
-    //사용자 캐릭터 url
-    @Column(name = "profile_image_url")
-    private String profileImageUrl;
+	//사용자 캐릭터 url
+	@Column(name = "profile_image_url")
+	private String profileImageUrl;
 
-    // 포인트
-    @Column(nullable = false)
-    @Builder.Default
-    private Integer point = 0;
+	// 포인트
+	@Column(nullable = false)
+	@Builder.Default
+	private Integer point = 0;
 
-    //마지막 접속 시간
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
+	//마지막 접속 시간
+	@Column(name = "last_login_at")
+	private LocalDateTime lastLoginAt;
 
-    //유저의 티어
-    @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserTier tier = UserTier.SEED;
+	//유저의 티어
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private UserTier tier = UserTier.SEED;
 
 	@Builder.Default
 	@ElementCollection
@@ -88,8 +88,7 @@ public class User {
 		String encodedPassword,
 		String email,
 		String nickname,
-		LocalDate birthDate
-	) {
+		LocalDate birthDate) {
 		return User.builder()
 			.loginId(loginId)
 			.password(encodedPassword)
@@ -99,12 +98,12 @@ public class User {
 			.build();
 	}
 
-    // 마지막 로그인 시간 업데이트
-    public void updateLastLoginAt() {
-        this.lastLoginAt = LocalDateTime.now();
-    }
+	// 마지막 로그인 시간 업데이트
+	public void updateLastLoginAt() {
+		this.lastLoginAt = LocalDateTime.now();
+	}
 
-    public boolean matchesPassword(String rawPassword, PasswordEncoder passwordEncoder) {
+	public boolean matchesPassword(String rawPassword, PasswordEncoder passwordEncoder) {
 		return passwordEncoder.matches(rawPassword, this.password);
 	}
 

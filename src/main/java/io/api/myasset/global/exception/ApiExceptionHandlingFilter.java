@@ -38,7 +38,8 @@ public class ApiExceptionHandlingFilter extends OncePerRequestFilter {
 		} catch (final Exception e) {
 			log.error("필터 체인에서 예상치 못한 예외 발생 - URI: {}, message: {}", request.getRequestURI(), e.getMessage(), e);
 			if (!response.isCommitted()) {
-				errorResponseWriter.write(response, HttpStatus.INTERNAL_SERVER_ERROR, GlobalError.INTERNAL_SERVER_ERROR);
+				errorResponseWriter.write(response, HttpStatus.INTERNAL_SERVER_ERROR,
+					GlobalError.INTERNAL_SERVER_ERROR);
 			}
 		}
 	}

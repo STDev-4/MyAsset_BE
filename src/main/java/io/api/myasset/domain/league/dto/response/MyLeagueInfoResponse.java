@@ -7,11 +7,11 @@ import lombok.Getter;
 @Getter
 @Builder
 public class MyLeagueInfoResponse {
-    private String nickname;
-    private String profileImageUrl;
-    private Integer point;
-    private String tier;
-    private Integer rank;
-    private String lastLoginAt;
-    private Boolean isActive;
+	private String nickname;
+	private String profileImageUrl;
+	private Integer point;
+	private String tier;
+	private Integer rank;
+	private String lastLoginAt;
+	private Boolean isActive;
 }

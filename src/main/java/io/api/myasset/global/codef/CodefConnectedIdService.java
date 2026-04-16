@@ -37,8 +37,7 @@ public class CodefConnectedIdService {
 	public Optional<String> createConnectedId(
 		InstitutionType institutionType,
 		String loginId,
-		String loginPassword
-	) {
+		String loginPassword) {
 		try {
 			Map<String, Object> params = buildAccountParams(institutionType, loginId, loginPassword);
 			EasyCodefResponse response = requestProduct(ACCOUNT_CREATE_URL, params);
@@ -68,8 +67,7 @@ public class CodefConnectedIdService {
 		String connectedId,
 		InstitutionType institutionType,
 		String loginId,
-		String loginPassword
-	) {
+		String loginPassword) {
 		try {
 			Map<String, Object> params = buildAccountParams(institutionType, loginId, loginPassword);
 			params.put("connectedId", connectedId);
@@ -96,8 +94,7 @@ public class CodefConnectedIdService {
 	private Map<String, Object> buildAccountParams(
 		InstitutionType institutionType,
 		String loginId,
-		String loginPassword
-	) throws Exception {
+		String loginPassword) throws Exception {
 		String encryptedPassword = RsaUtil.encryptRsa(loginPassword, easyCodefClient.getPublicKey());
 
 		Map<String, Object> account = new HashMap<>();
