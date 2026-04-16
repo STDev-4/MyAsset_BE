@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.api.myasset.domain.character.entity.UserCharacter;
 import io.api.myasset.domain.league.dto.response.LeagueSelectedRankingResponse;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -42,38 +43,49 @@ public class LeagueService {
 		List<LeagueRankingUserResponse> rankingList = new ArrayList<>();
 		int myRank = 0;
 		int rank = 1;
+        for (User user : users) {
 
-		for (User user : users) {
-			boolean active = isActive(user.getLastLoginAt());
+            boolean active = isActive(user.getLastLoginAt());
 
-			LeagueRankingUserResponse rankingUserResponse = LeagueRankingUserResponse.builder()
-				.rank(rank)
-				.nickname(user.getNickname())
-				.profileImageUrl(user.getProfileImageUrl())
-				.point(user.getPoint())
-				.lastLoginAt(formatLastLogin(user.getLastLoginAt()))
-				.isActive(active)
-				.build();
+            String profileImageUrl = user.getUserCharacters().stream()
+                    .filter(UserCharacter::isActive)
+                    .findFirst()
+                    .map(uc -> uc.getCharacter().getImageUrl())
+                    .orElse(null);
 
-			rankingList.add(rankingUserResponse);
+            LeagueRankingUserResponse rankingUserResponse = LeagueRankingUserResponse.builder()
+                    .rank(rank)
+                    .nickname(user.getNickname())
+                    .profileImageUrl(profileImageUrl)
+                    .point(user.getPoint())
+                    .lastLoginAt(formatLastLogin(user.getLastLoginAt()))
+                    .isActive(active)
+                    .build();
 
-			if (user.getId().equals(me.getId())) {
-				myRank = rank;
-			}
+            rankingList.add(rankingUserResponse);
 
-			rank++;
-		}
+            if (user.getId().equals(me.getId())) {
+                myRank = rank;
+            }
 
-		MyLeagueInfoResponse myInfo = MyLeagueInfoResponse.builder()
-			.nickname(me.getNickname())
-			.profileImageUrl(me.getProfileImageUrl())
-			.point(me.getPoint())
-			.tier(me.getTier().getLabel())
-			.rank(myRank)
-			.lastLoginAt(formatLastLogin(me.getLastLoginAt()))
-			.isActive(isActive(me.getLastLoginAt()))
-			.build();
+            rank++;
+        }
 
+        String profileImageUrl = me.getUserCharacters().stream()
+                .filter(UserCharacter::isActive)
+                .findFirst()
+                .map(uc -> uc.getCharacter().getImageUrl())
+                .orElse(null);
+
+        MyLeagueInfoResponse myInfo = MyLeagueInfoResponse.builder()
+                .nickname(me.getNickname())
+                .profileImageUrl(profileImageUrl)
+                .point(me.getPoint())
+                .tier(me.getTier().getLabel())
+                .rank(myRank)
+                .lastLoginAt(formatLastLogin(me.getLastLoginAt()))
+                .isActive(isActive(me.getLastLoginAt()))
+                .build();
 		LocalDateTime endTime = getNextResetTime();
 		String remainingTime = calculateRemainingTime(endTime);
 
@@ -148,22 +160,28 @@ public class LeagueService {
 		List<LeagueRankingUserResponse> rankingList = new ArrayList<>();
 		int rank = 1;
 
-		for (User user : users) {
-			boolean active = isActive(user.getLastLoginAt());
+        for (User user : users) {
 
-			LeagueRankingUserResponse rankingUserResponse = LeagueRankingUserResponse.builder()
-				.rank(rank)
-				.nickname(user.getNickname())
-				.profileImageUrl(user.getProfileImageUrl())
-				.point(user.getPoint())
-				.lastLoginAt(formatLastLogin(user.getLastLoginAt()))
-				.isActive(active)
-				.build();
+            boolean active = isActive(user.getLastLoginAt());
 
-			rankingList.add(rankingUserResponse);
-			rank++;
-		}
+            String profileImageUrl = user.getUserCharacters().stream()
+                    .filter(UserCharacter::isActive)
+                    .findFirst()
+                    .map(uc -> uc.getCharacter().getImageUrl())
+                    .orElse(null);
 
+            LeagueRankingUserResponse rankingUserResponse = LeagueRankingUserResponse.builder()
+                    .rank(rank)
+                    .nickname(user.getNickname())
+                    .profileImageUrl(profileImageUrl)
+                    .point(user.getPoint())
+                    .lastLoginAt(formatLastLogin(user.getLastLoginAt()))
+                    .isActive(active)
+                    .build();
+
+            rankingList.add(rankingUserResponse);
+            rank++;
+        }
 		String remainingTime = calculateRemainingTime(getNextResetTime());
 
 		return LeagueSelectedRankingResponse.builder()
