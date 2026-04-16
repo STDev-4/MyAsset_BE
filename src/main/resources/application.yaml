@@ -21,6 +21,16 @@ spring:
         format_sql: true
     open-in-view: false
 
+  batch:
+    jdbc:
+      initialize-schema: always  # BATCH_JOB_* 메타 테이블 자동 생성
+    job:
+      enabled: false             # 기동 시 Job 자동 실행 방지
+
+batch:
+  scheduler:
+    enabled: ${BATCH_SCHEDULER_ENABLED:false}  # 운영에서만 on
+
 codef:
   client-id: ${CLIENT_ID}
   client-secret: ${CLIENT_SECRET}
