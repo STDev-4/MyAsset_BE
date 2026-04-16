@@ -69,10 +69,7 @@ public class User {
 	@Column
 	private String connectedId;
 
-	@Column(name = "profile_image_url")
-	private String profileImageUrl;
-
-	@Column(nullable = false, columnDefinition = "INT DEFAULT 0")
+@Column(nullable = false, columnDefinition = "INT DEFAULT 0")
 	@Builder.Default
 	private Integer point = 0;
 
