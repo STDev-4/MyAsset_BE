@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import io.api.myasset.domain.user.entity.User;
 
+
 public interface UserRepository extends JpaRepository<User, Long> {
 
 	boolean existsByLoginId(String loginId);
@@ -16,7 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	boolean existsByEmail(String email);
 
 	Optional<User> findByLoginId(String loginId);
-
+    
 	// 특정 티어 사용자 수 조회
 	long countByTier(UserTier tier);
 
@@ -25,4 +26,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
 	// 현재 유저보다 point가 높은 유저 수 조회
 	long countByPointGreaterThan(Integer point);
+
+	List<User> findByTierOrderByPointDesc(UserTier tier);
+
 }
