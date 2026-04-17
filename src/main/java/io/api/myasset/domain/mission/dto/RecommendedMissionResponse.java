@@ -1,7 +1,7 @@
 package io.api.myasset.domain.mission.dto;
 
 public record RecommendedMissionResponse(
-        Long missionId,
+        String recommendationId,
         String title,
         String description,
         String iconType,
