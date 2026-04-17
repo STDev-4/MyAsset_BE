@@ -36,4 +36,6 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
     int countByUserIdAndMissionDate(Long userId, LocalDate missionDate);
 
     int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
+
+    int countByUserIdAndMissionDateAndStatusNot(Long userId, LocalDate missionDate, MissionStatus status);
 }

@@ -1,7 +1,7 @@
 package io.api.myasset.domain.mission.dto;
 
 public record MissionStatusCardResponse(
-        int todayMissionCompletedCount,
+        int todayMissionStartedCount,
         int todayMissionTotalCount,
         int yesterdayProgressPercent,
         String autoEvaluateRemainingTime,

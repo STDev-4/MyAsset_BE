@@ -31,8 +31,8 @@ public class MissionDashboardService {
         LocalDate yesterday = today.minusDays(1);
 
         int todayTotal = missionRepository.countByUserIdAndMissionDate(userId, today);
-        int todayCompleted = missionRepository.countByUserIdAndMissionDateAndStatus(
-                userId, today, MissionStatus.COMPLETED
+        int todayStarted = missionRepository.countByUserIdAndMissionDateAndStatusNot(
+                userId, today, MissionStatus.READY
         );
 
         int yesterdayTotal = missionRepository.countByUserIdAndMissionDate(userId, yesterday);
@@ -48,7 +48,7 @@ public class MissionDashboardService {
         int pointToNextTier = calculatePointToNextTier(user);
 
         return new MissionStatusCardResponse(
-                todayCompleted,
+                todayStarted,
                 todayTotal,
                 yesterdayPercent,
                 remainingTime,
