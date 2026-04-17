@@ -41,6 +41,10 @@ jwt:
   access-token-expiry: 1800000    # 30분 (ms)
   refresh-token-expiry: 604800000 # 7일 (ms)
 
+openai:
+  api-key: ${OPENAI_API_KEY}
+  url: https://api.openai.com/v1
+
 aws:
   s3:
     enabled: ${AWS_S3_ENABLED:false} # local에서는 false로 변경 바람
