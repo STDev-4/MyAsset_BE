@@ -1,9 +1,9 @@
 package io.api.myasset.domain.mission.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public record MissionAcceptRequest(
-        @NotNull
-        Long missionId
+        @NotBlank
+        String recommendationId
 ) {
 }
