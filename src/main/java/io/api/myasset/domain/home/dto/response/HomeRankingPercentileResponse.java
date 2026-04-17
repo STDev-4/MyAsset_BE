@@ -9,6 +9,6 @@ import lombok.Getter;
 @Builder
 public class HomeRankingPercentileResponse {
 
-	private final double  rankingPercentile;
+    private String rankingPercentile;
 	private final LocalDate measuredAt;
 }

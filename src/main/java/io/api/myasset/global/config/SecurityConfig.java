@@ -37,13 +37,12 @@ public class SecurityConfig {
 			.csrf(AbstractHttpConfigurer::disable)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
-<<<<<<< HEAD
+
 				.requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/actuator/health",
 					"/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
 				.permitAll()
-=======
+
 				.requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/actuator/health").permitAll()
->>>>>>> cf9bb80b04796c161af14f704ae4fe74131b730b
 				.requestMatchers("/api/auth/logout").authenticated()
 				.anyRequest().authenticated())
 			.formLogin(form -> form.disable())
