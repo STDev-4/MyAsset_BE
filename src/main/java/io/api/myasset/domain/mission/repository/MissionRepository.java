@@ -1,6 +1,7 @@
 package io.api.myasset.domain.mission.repository;
 
 import io.api.myasset.domain.mission.entity.Mission;
+import io.api.myasset.domain.mission.enums.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -28,4 +29,10 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
               and m.recommendationId = :recommendationId
             """)
     boolean existsAcceptedMission(Long userId, String recommendationId);
+
+    // 오늘 전체 미션 개수 조회
+    int countByUserIdAndMissionDate(Long userId, LocalDate missionDate);
+
+    // 오늘 완료한 미션 개수 조회
+    int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
 }
