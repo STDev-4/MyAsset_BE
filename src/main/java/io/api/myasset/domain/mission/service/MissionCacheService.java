@@ -1,64 +1,44 @@
 package io.api.myasset.domain.mission.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.api.myasset.domain.mission.dto.RecommendedMissionResponse;
-import io.api.myasset.domain.mission.exception.MissionError;
-import io.api.myasset.global.exception.error.BusinessException;
+import io.api.myasset.domain.mission.dto.CachedRecommendedMission;
+import io.api.myasset.domain.mission.provider.MissionJsonProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class MissionCacheService {
 
     private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;
+    private final MissionJsonProvider missionJsonProvider;
 
-    public List<RecommendedMissionResponse> getRecommendedMissions(Long userId, LocalDate date) {
-        String key = createRecommendedMissionKey(userId, date);
-        String json = redisTemplate.opsForValue().get(key);
-
-        if (json == null || json.isBlank()) {
-            return null;
-        }
-
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<RecommendedMissionResponse>>() {});
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(MissionError.MISSION_REDIS_DESERIALIZE_ERROR);
-        }
-    }
-
-    public void saveRecommendedMissions(Long userId, LocalDate date, List<RecommendedMissionResponse> missions) {
-        String key = createRecommendedMissionKey(userId, date);
-
-        try {
-            String json = objectMapper.writeValueAsString(missions);
-            redisTemplate.opsForValue().set(key, json, getDurationUntilEndOfDay());
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(MissionError.MISSION_REDIS_SERIALIZE_ERROR);
-        }
-    }
-
-    public void evictRecommendedMissions(Long userId, LocalDate date) {
-        redisTemplate.delete(createRecommendedMissionKey(userId, date));
-    }
-
-    private String createRecommendedMissionKey(Long userId, LocalDate date) {
+    private String recommendedMissionKey(Long userId, LocalDate date) {
         return "mission:recommended:" + userId + ":" + date.toString().replace("-", "");
     }
 
-    private Duration getDurationUntilEndOfDay() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
-        return Duration.between(now, endOfDay);
+    public List<CachedRecommendedMission> getRecommendedMissionCache(Long userId, LocalDate date) {
+        String value = redisTemplate.opsForValue().get(recommendedMissionKey(userId, date));
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return missionJsonProvider.toRecommendedMissionList(value);
+    }
+
+    public void saveRecommendedMissionCache(Long userId, LocalDate date, List<CachedRecommendedMission> missions) {
+        redisTemplate.opsForValue().set(
+                recommendedMissionKey(userId, date),
+                missionJsonProvider.toRecommendedMissionJson(missions),
+                1,
+                TimeUnit.DAYS
+        );
+    }
+
+    public void evictRecommendedMissionCache(Long userId, LocalDate date) {
+        redisTemplate.delete(recommendedMissionKey(userId, date));
     }
 }
