@@ -55,6 +55,16 @@ public class UserCharacter {
 			.build();
 	}
 
+	/** 회원가입 시 기본 캐릭터 배정 — 즉시 활성 상태로 생성 */
+	public static UserCharacter assignDefault(User user, Character character) {
+		return UserCharacter.builder()
+			.user(user)
+			.character(character)
+			.active(true)
+			.unlockedAt(LocalDateTime.now())
+			.build();
+	}
+
 	public void activate() {
 		this.active = true;
 	}
