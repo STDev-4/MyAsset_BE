@@ -1,13 +1,16 @@
 package io.api.myasset.domain.mission.service;
 
-import io.api.myasset.domain.analysisinsight.converter.JsonListConverter;
-import io.api.myasset.domain.mission.dto.*;
+import io.api.myasset.domain.mission.dto.CachedRecommendedMission;
+import io.api.myasset.domain.mission.dto.MissionAcceptRequest;
+import io.api.myasset.domain.mission.dto.MissionAcceptResponse;
+import io.api.myasset.domain.mission.dto.MissionDetailResponse;
+import io.api.myasset.domain.mission.dto.MissionStartResponse;
+import io.api.myasset.domain.mission.dto.TodayMissionResponse;
 import io.api.myasset.domain.mission.entity.Mission;
-import io.api.myasset.domain.mission.entity.RecommendedMission;
 import io.api.myasset.domain.mission.enums.MissionStatus;
 import io.api.myasset.domain.mission.exception.MissionError;
+import io.api.myasset.domain.mission.provider.MissionJsonProvider;
 import io.api.myasset.domain.mission.repository.MissionRepository;
-import io.api.myasset.domain.mission.repository.RecommendedMissionRepository;
 import io.api.myasset.global.exception.error.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,26 +24,61 @@ import java.util.List;
 public class MissionService {
 
     private final MissionRepository missionRepository;
-    private final RecommendedMissionRepository recommendedMissionRepository;
-    private final JsonListConverter jsonListConverter;
+    private final MissionJsonProvider missionJsonProvider;
     private final MissionCacheService missionCacheService;
 
     @Transactional
     public MissionAcceptResponse acceptMission(Long userId, MissionAcceptRequest request) {
-        RecommendedMission recommendedMission = recommendedMissionRepository.findByIdAndUserId(request.missionId(), userId)
-                .orElseThrow(() -> new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND));
+        LocalDate today = LocalDate.now();
 
-        if (recommendedMission.isAccepted()) {
+        List<CachedRecommendedMission> cachedMissions =
+                missionCacheService.getRecommendedMissionCache(userId, today);
+
+        if (cachedMissions == null || cachedMissions.isEmpty()) {
+            throw new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND);
+        }
+
+        if (missionRepository.existsAcceptedMission(userId, request.recommendationId())) {
             throw new BusinessException(MissionError.MISSION_ALREADY_ACCEPTED);
         }
 
-        Mission mission = Mission.from(recommendedMission);
-        recommendedMission.accept();
+        CachedRecommendedMission selected = cachedMissions.stream()
+                .filter(item -> item.recommendationId().equals(request.recommendationId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND));
+
+        Mission mission = Mission.of(
+                userId,
+                selected.title(),
+                selected.description(),
+                selected.iconType(),
+                selected.rewardPoint(),
+                selected.expectedSavingAmount(),
+                missionJsonProvider.toJson(selected.behaviorInsights()),
+                missionJsonProvider.toJson(selected.statisticalReasons()),
+                selected.recommendationId()
+        );
+
         Mission savedMission = missionRepository.save(mission);
 
-        missionCacheService.evictRecommendedMissions(userId, LocalDate.now());
+        List<CachedRecommendedMission> remaining = cachedMissions.stream()
+                .filter(item -> !item.recommendationId().equals(request.recommendationId()))
+                .toList();
 
-        return new MissionAcceptResponse(savedMission.getId());
+        if (remaining.isEmpty()) {
+            missionCacheService.evictRecommendedMissionCache(userId, today);
+        } else {
+            missionCacheService.saveRecommendedMissionCache(userId, today, remaining);
+        }
+
+        return new MissionAcceptResponse(
+                savedMission.getId(),
+                savedMission.getTitle(),
+                savedMission.getDescription(),
+                savedMission.getIconType(),
+                savedMission.getRewardPoint(),
+                savedMission.getExpectedSavingAmount()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -70,8 +108,8 @@ public class MissionService {
                 mission.getRewardPoint(),
                 mission.getExpectedSavingAmount(),
                 mission.getStatus().name(),
-                jsonListConverter.toList(mission.getBehaviorInsightsJson()),
-                jsonListConverter.toList(mission.getStatisticalReasonsJson())
+                missionJsonProvider.toList(mission.getBehaviorInsightsJson()),
+                missionJsonProvider.toList(mission.getStatisticalReasonsJson())
         );
     }
 
