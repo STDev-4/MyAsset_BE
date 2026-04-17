@@ -1,65 +1,63 @@
 package io.api.myasset.domain.mission.service;
 
-import io.api.myasset.domain.analysisinsight.converter.JsonListConverter;
+import io.api.myasset.domain.approval.application.ApprovalService;
+import io.api.myasset.domain.approval.application.dto.SpendingTopResponse;
 import io.api.myasset.domain.gpt.executor.GptExecutor;
 import io.api.myasset.domain.gpt.prompt.DataPrompt;
 import io.api.myasset.domain.gpt.prompt.PromptTemplate;
 import io.api.myasset.domain.gpt.prompt.mission.RecommendedMissionDomainPrompt;
+import io.api.myasset.domain.mission.dto.CachedRecommendedMission;
 import io.api.myasset.domain.mission.dto.GptRecommendedMissionResponse;
 import io.api.myasset.domain.mission.dto.RecommendedMissionResponse;
-import io.api.myasset.domain.mission.entity.RecommendedMission;
-import io.api.myasset.domain.mission.repository.RecommendedMissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class RecommendedMissionService {
 
-    private final RecommendedMissionRepository recommendedMissionRepository;
-    private final JsonListConverter jsonListConverter;
+    private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+
     private final GptExecutor gptExecutor;
     private final RecommendedMissionDomainPrompt recommendedMissionDomainPrompt;
     private final MissionCacheService missionCacheService;
+    private final ApprovalService approvalService;
 
-    @Transactional
     public List<RecommendedMissionResponse> getRecommendedMissions(Long userId) {
         LocalDate today = LocalDate.now();
 
-        List<RecommendedMissionResponse> cached = missionCacheService.getRecommendedMissions(userId, today);
+        List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
         if (cached != null && !cached.isEmpty()) {
-            return cached;
-        }
-
-        List<RecommendedMission> savedMissions = recommendedMissionRepository.findTodayRecommendedMissions(userId, today);
-        if (!savedMissions.isEmpty()) {
-            List<RecommendedMissionResponse> responses = savedMissions.stream()
-                    .map(mission -> new RecommendedMissionResponse(
-                            mission.getId(),
-                            mission.getTitle(),
-                            mission.getDescription(),
-                            mission.getIconType(),
-                            mission.getRewardPoint(),
-                            mission.getExpectedSavingAmount()
+            return cached.stream()
+                    .map(item -> new RecommendedMissionResponse(
+                            item.recommendationId(),
+                            item.title(),
+                            item.description(),
+                            item.iconType(),
+                            item.rewardPoint(),
+                            item.expectedSavingAmount()
                     ))
                     .toList();
-
-            missionCacheService.saveRecommendedMissions(userId, today, responses);
-            return responses;
         }
+
+        String endDate = YearMonth.now()
+                .minusMonths(1)
+                .atEndOfMonth()
+                .format(YYYYMMDD);
+
+        SpendingTopResponse topSpending = approvalService.getTopSpending(userId, endDate, 3);
+
+        String spendingData = buildSpendingDataPrompt(topSpending);
 
         PromptTemplate dataPrompt = new DataPrompt(
                 "사용자 소비 데이터",
-                """
-                - 최근 소비에서 배달, 카페, 간식 지출 비중이 높다.
-                - 소액 결제가 반복되는 패턴이 있다.
-                - 저녁 시간대 충동 소비 가능성이 높다.
-                - 즉시 만족형 소비를 줄이는 미션이 필요하다.
-                """
+                spendingData
         );
 
         GptRecommendedMissionResponse gptResponse = gptExecutor.execute(
@@ -69,34 +67,54 @@ public class RecommendedMissionService {
                 GptRecommendedMissionResponse.class
         );
 
-        List<RecommendedMission> missions = gptResponse.missions().stream()
-                .map(item -> RecommendedMission.of(
-                        userId,
+        List<CachedRecommendedMission> cacheItems = gptResponse.missions().stream()
+                .map(item -> new CachedRecommendedMission(
+                        UUID.randomUUID().toString(),
                         item.title(),
                         item.description(),
                         item.iconType(),
                         item.rewardPoint(),
                         item.expectedSavingAmount(),
-                        jsonListConverter.toJson(item.behaviorInsights()),
-                        jsonListConverter.toJson(item.statisticalReasons()),
-                        today
+                        item.behaviorInsights(),
+                        item.statisticalReasons()
                 ))
                 .toList();
 
-        List<RecommendedMission> saved = recommendedMissionRepository.saveAll(missions);
+        missionCacheService.saveRecommendedMissionCache(userId, today, cacheItems);
 
-        List<RecommendedMissionResponse> responses = saved.stream()
-                .map(mission -> new RecommendedMissionResponse(
-                        mission.getId(),
-                        mission.getTitle(),
-                        mission.getDescription(),
-                        mission.getIconType(),
-                        mission.getRewardPoint(),
-                        mission.getExpectedSavingAmount()
+        return cacheItems.stream()
+                .map(item -> new RecommendedMissionResponse(
+                        item.recommendationId(),
+                        item.title(),
+                        item.description(),
+                        item.iconType(),
+                        item.rewardPoint(),
+                        item.expectedSavingAmount()
                 ))
                 .toList();
+    }
 
-        missionCacheService.saveRecommendedMissions(userId, today, responses);
-        return responses;
+    private String buildSpendingDataPrompt(SpendingTopResponse topSpending) {
+        if (topSpending == null || topSpending.items() == null || topSpending.items().isEmpty()) {
+            return """
+                    - 지난달 소비 데이터가 충분하지 않다.
+                    - 식비, 카페, 쇼핑, 교통 등 일상 소비에서 바로 줄일 수 있는 절약 미션을 추천한다.
+                    - 오늘 바로 실천 가능한 수준의 미션만 제안한다.
+                    """;
+        }
+
+        String top3Text = topSpending.items().stream()
+                .map(item -> "- " + item.rank() + "위: " + item.category() + " (" + item.amount() + "원)")
+                .reduce((a, b) -> a + "\n" + b)
+                .orElse("- 소비 데이터 없음");
+
+        return """
+                - 사용자의 지난달 소비 상위 업종은 다음과 같다.
+                %s
+                - 반드시 위 상위 소비 업종을 우선 반영해서 미션을 생성한다.
+                - 소비가 큰 업종일수록 더 직접적으로 줄일 수 있는 행동 미션을 제안한다.
+                - 각 미션은 해당 소비 업종과 연결되어야 한다.
+                - 오늘 바로 실천 가능한 수준의 미션만 제안한다.
+                """.formatted(top3Text);
     }
 }
