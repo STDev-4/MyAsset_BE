@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import io.api.myasset.domain.user.entity.User;
 import io.api.myasset.domain.user.exception.UserError;
 import io.api.myasset.domain.user.repository.UserRepository;
 import io.api.myasset.global.auth.dto.InstitutionCredential;
+import io.api.myasset.global.batch.event.BankLinkedEvent;
 import io.api.myasset.global.codef.CodefConnectedIdService;
 import io.api.myasset.global.codef.dto.CodefLinkRequest;
 import io.api.myasset.global.codef.dto.CodefLinkResponse;
@@ -26,6 +28,7 @@ public class CodefLinkService {
 
 	private final UserRepository userRepository;
 	private final CodefConnectedIdService codefConnectedIdService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	/**
 	 * 유저당 ConnectedId는 1개.
@@ -53,6 +56,10 @@ public class CodefLinkService {
 			}
 		}
 
+		if (hasCardInstitution(linked)) {
+			eventPublisher.publishEvent(new BankLinkedEvent(userId));
+		}
+
 		return new CodefLinkResponse(linked, failed);
 	}
 
@@ -61,8 +68,7 @@ public class CodefLinkService {
 			Optional<String> connectedId = codefConnectedIdService.createConnectedId(
 				credential.institutionType(),
 				credential.loginId(),
-				credential.loginPassword()
-			);
+				credential.loginPassword());
 
 			connectedId.ifPresent(user::assignConnectedId);
 			return connectedId.isPresent();
@@ -72,7 +78,14 @@ public class CodefLinkService {
 			user.getConnectedId(),
 			credential.institutionType(),
 			credential.loginId(),
-			credential.loginPassword()
-		);
+			credential.loginPassword());
+	}
+
+	/**
+	 * 카드 기관이 연동된 경우에만 Sync 가 의미 있으므로 이벤트 발행 여부를 제어한다.
+	 */
+	private boolean hasCardInstitution(List<InstitutionType> linked) {
+		return linked.stream()
+			.anyMatch(t -> t.getCategory() == InstitutionType.Category.CARD);
 	}
 }

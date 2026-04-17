@@ -33,9 +33,9 @@ public enum InstitutionType {
 
 	private final String displayName;
 	private final Category category;
-	private final String codefOrgCode;      // Codef 기관 코드
+	private final String codefOrgCode; // Codef 기관 코드
 	private final String codefBusinessType; // Codef 업무 구분: BK/ST/CD
-	private final String codefClientType;   // Codef 고객 구분: A(증권개인), P(은행/카드개인), B(법인)
+	private final String codefClientType; // Codef 고객 구분: A(증권개인), P(은행/카드개인), B(법인)
 
 	public enum Category {
 		INVEST, BANK, CARD

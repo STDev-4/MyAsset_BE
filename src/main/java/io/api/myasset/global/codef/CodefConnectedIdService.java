@@ -1,5 +1,7 @@
 package io.api.myasset.global.codef;
 
+import static io.api.myasset.global.codef.constant.CodefUrl.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,8 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CodefConnectedIdService {
 
-	private static final String ACCOUNT_CREATE_URL = "/v1/account/create";
-	private static final String ACCOUNT_ADD_URL = "/v1/account/add";
 	private static final String SUCCESS_CODE = "CF-00000";
 	private static final String COUNTRY_CODE = "KR";
 	private static final String LOGIN_TYPE_ID_PW = "1";
@@ -37,8 +37,7 @@ public class CodefConnectedIdService {
 	public Optional<String> createConnectedId(
 		InstitutionType institutionType,
 		String loginId,
-		String loginPassword
-	) {
+		String loginPassword) {
 		try {
 			Map<String, Object> params = buildAccountParams(institutionType, loginId, loginPassword);
 			EasyCodefResponse response = requestProduct(ACCOUNT_CREATE_URL, params);
@@ -68,8 +67,7 @@ public class CodefConnectedIdService {
 		String connectedId,
 		InstitutionType institutionType,
 		String loginId,
-		String loginPassword
-	) {
+		String loginPassword) {
 		try {
 			Map<String, Object> params = buildAccountParams(institutionType, loginId, loginPassword);
 			params.put("connectedId", connectedId);
@@ -96,8 +94,7 @@ public class CodefConnectedIdService {
 	private Map<String, Object> buildAccountParams(
 		InstitutionType institutionType,
 		String loginId,
-		String loginPassword
-	) throws Exception {
+		String loginPassword) throws Exception {
 		String encryptedPassword = RsaUtil.encryptRsa(loginPassword, easyCodefClient.getPublicKey());
 
 		Map<String, Object> account = new HashMap<>();

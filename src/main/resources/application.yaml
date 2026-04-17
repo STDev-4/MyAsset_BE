@@ -19,8 +19,17 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
+
+  batch:
+    jdbc:
+      initialize-schema: always  # BATCH_JOB_* 메타 테이블 자동 생성
+    job:
+      enabled: false             # 기동 시 Job 자동 실행 방지
+
+batch:
+  scheduler:
+    enabled: ${BATCH_SCHEDULER_ENABLED:false}  # 운영에서만 on
 
 codef:
   client-id: ${CLIENT_ID}
@@ -35,3 +44,9 @@ jwt:
 openai:
   api-key: ${OPENAI_API_KEY}
   url: https://api.openai.com/v1
+
+aws:
+  s3:
+    enabled: ${AWS_S3_ENABLED:true} # local에서는 false로 변경 바람
+    bucket: ${AWS_S3_BUCKET}
+    region: ${AWS_S3_REGION}

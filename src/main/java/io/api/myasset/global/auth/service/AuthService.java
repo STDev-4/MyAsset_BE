@@ -49,8 +49,7 @@ public class AuthService {
 			passwordEncoder.encode(request.password()),
 			request.email(),
 			request.nickname(),
-			request.birthDate()
-		);
+			request.birthDate());
 
 		User saved = userRepository.save(user);
 		TokenPair tokens = issueTokens(saved);
