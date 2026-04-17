@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.api.myasset.domain.user.exception.UserError;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import io.api.myasset.domain.character.entity.UserCharacter;
@@ -167,4 +168,11 @@ public class User {
 			.filter(t -> t.getCategory() == InstitutionType.Category.CARD)
 			.toList();
 	}
+
+    public void addPoint(int amount) {
+        if (amount < 0) {
+            throw new BusinessException(UserError.INVALID_POINT_AMOUNT);
+        }
+        this.point += amount;
+    }
 }
