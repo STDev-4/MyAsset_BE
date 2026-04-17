@@ -1,5 +1,7 @@
 package io.api.myasset.global.codef;
 
+import static io.api.myasset.global.codef.constant.CodefUrl.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,8 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class CodefConnectedIdService {
 
-	private static final String ACCOUNT_CREATE_URL = "/v1/account/create";
-	private static final String ACCOUNT_ADD_URL = "/v1/account/add";
 	private static final String SUCCESS_CODE = "CF-00000";
 	private static final String COUNTRY_CODE = "KR";
 	private static final String LOGIN_TYPE_ID_PW = "1";
