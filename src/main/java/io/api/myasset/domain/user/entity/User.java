@@ -169,10 +169,29 @@ public class User {
 			.toList();
 	}
 
+    //승급로직
     public void addPoint(int amount) {
         if (amount < 0) {
             throw new BusinessException(UserError.INVALID_POINT_AMOUNT);
         }
         this.point += amount;
+        promoteTierIfEligible();
+    }
+
+    private void promoteTierIfEligible() {
+        while (true) {
+            Integer nextTierRequiredPoint = this.tier.getNextTierRequiredPoint();
+            UserTier nextTier = this.tier.next();
+
+            if (nextTierRequiredPoint == null || nextTier == null) {
+                return;
+            }
+
+            if (this.point < nextTierRequiredPoint) {
+                return;
+            }
+
+            this.tier = nextTier;
+        }
     }
 }
