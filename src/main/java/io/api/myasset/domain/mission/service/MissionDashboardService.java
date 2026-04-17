@@ -45,7 +45,7 @@ public class MissionDashboardService {
         String remainingTime = formatRemainingTime(LocalDateTime.now(), today.atTime(23, 59, 59));
 
         int totalPoint = user.getPoint();
-        int pointToNextTier = calculatePointToNextTier(totalPoint);
+        int pointToNextTier = calculatePointToNextTier(user);
 
         return new MissionStatusCardResponse(
                 todayCompleted,
@@ -72,8 +72,13 @@ public class MissionDashboardService {
         return String.format("%02d:%02d:%02d", hour, minute, second);
     }
 
-    private int calculatePointToNextTier(int totalPoint) {
-        int nextTierPoint = 3000; // 일단 예시. 나중에 티어 정책에 맞게 수정
-        return Math.max(nextTierPoint - totalPoint, 0);
+    private int calculatePointToNextTier(User user) {
+        Integer nextTierRequiredPoint = user.getTier().getNextTierRequiredPoint();
+
+        if (nextTierRequiredPoint == null) {
+            return 0;
+        }
+
+        return Math.max(nextTierRequiredPoint - user.getPoint(), 0);
     }
 }
