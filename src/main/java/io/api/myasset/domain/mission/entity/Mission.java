@@ -59,8 +59,8 @@ public class Mission {
     @Column(name = "auto_evaluate_at", nullable = false)
     private LocalDateTime autoEvaluateAt;
 
-    @Column(name = "recommended_mission_id", nullable = false)
-    private Long recommendedMissionId;
+    @Column(name = "recommendation_id", nullable = false, length = 100)
+    private String recommendationId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -84,7 +84,7 @@ public class Mission {
             LocalDate missionDate,
             LocalDateTime startedAt,
             LocalDateTime autoEvaluateAt,
-            Long recommendedMissionId
+            String recommendationId
     ) {
         this.userId = userId;
         this.title = title;
@@ -98,26 +98,36 @@ public class Mission {
         this.missionDate = missionDate;
         this.startedAt = startedAt;
         this.autoEvaluateAt = autoEvaluateAt;
-        this.recommendedMissionId = recommendedMissionId;
+        this.recommendationId = recommendationId;
     }
 
-    public static Mission from(RecommendedMission recommendedMission) {
+    public static Mission of(
+            Long userId,
+            String title,
+            String description,
+            String iconType,
+            Integer rewardPoint,
+            Integer expectedSavingAmount,
+            String behaviorInsightsJson,
+            String statisticalReasonsJson,
+            String recommendationId
+    ) {
         LocalDate today = LocalDate.now();
 
         return Mission.internalBuilder()
-                .userId(recommendedMission.getUserId())
-                .title(recommendedMission.getTitle())
-                .description(recommendedMission.getDescription())
-                .iconType(recommendedMission.getIconType())
-                .rewardPoint(recommendedMission.getRewardPoint())
-                .expectedSavingAmount(recommendedMission.getExpectedSavingAmount())
-                .behaviorInsightsJson(recommendedMission.getBehaviorInsightsJson())
-                .statisticalReasonsJson(recommendedMission.getStatisticalReasonsJson())
+                .userId(userId)
+                .title(title)
+                .description(description)
+                .iconType(iconType)
+                .rewardPoint(rewardPoint)
+                .expectedSavingAmount(expectedSavingAmount)
+                .behaviorInsightsJson(behaviorInsightsJson)
+                .statisticalReasonsJson(statisticalReasonsJson)
                 .status(MissionStatus.READY)
                 .missionDate(today)
                 .startedAt(null)
                 .autoEvaluateAt(today.atTime(23, 59, 59))
-                .recommendedMissionId(recommendedMission.getId())
+                .recommendationId(recommendationId)
                 .build();
     }
 
