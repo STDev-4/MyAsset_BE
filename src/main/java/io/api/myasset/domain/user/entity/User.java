@@ -126,8 +126,8 @@ public class User {
         this.connectedId = connectedId;
     }
 
-    public void updateLastLoginAt() {
-        this.lastLoginAt = LocalDateTime.now();
+    public void updateLastLoginAt(LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
     }
 
     /**

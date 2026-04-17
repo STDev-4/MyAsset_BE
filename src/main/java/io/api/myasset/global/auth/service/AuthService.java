@@ -17,6 +17,8 @@ import io.api.myasset.global.exception.error.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -51,12 +53,15 @@ public class AuthService {
 			request.nickname(),
 			request.birthDate());
 
-		User saved = userRepository.save(user);
-		TokenPair tokens = issueTokens(saved);
+        user.updateLastLoginAt(LocalDateTime.now());
+
+        User saved = userRepository.save(user);
+        TokenPair tokens = issueTokens(saved);
 
 		return new SignupResult(SignupResponse.from(saved), tokens);
 	}
 
+    @Transactional
 	public TokenPair login(LoginRequest request) {
 		User user = userRepository.findByLoginId(request.loginId())
 			.orElseThrow(() -> new BusinessException(UserError.INVALID_PASSWORD));
@@ -64,6 +69,10 @@ public class AuthService {
 		if (!user.matchesPassword(request.password(), passwordEncoder)) {
 			throw new BusinessException(UserError.INVALID_PASSWORD);
 		}
+
+        // 로그인 성공 시 lastLoginAt 갱신
+        user.updateLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
 
 		return issueTokens(user);
 	}

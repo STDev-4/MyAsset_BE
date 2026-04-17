@@ -5,14 +5,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.api.myasset.domain.character.entity.UserCharacter;
-import io.api.myasset.domain.league.dto.response.LeagueSelectedRankingResponse;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.api.myasset.domain.character.entity.UserCharacter;
 import io.api.myasset.domain.league.dto.response.LeagueRankingResponse;
 import io.api.myasset.domain.league.dto.response.LeagueRankingUserResponse;
+import io.api.myasset.domain.league.dto.response.LeagueSelectedRankingResponse;
 import io.api.myasset.domain.league.dto.response.MyLeagueInfoResponse;
 import io.api.myasset.domain.user.entity.User;
 import io.api.myasset.domain.user.entity.UserTier;
@@ -26,31 +26,38 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class LeagueService {
 
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-	// 리그 랭킹 조회
-	public LeagueRankingResponse getLeagueRanking(Long userId, int size) {
+    // 리그 랭킹 조회
+    public LeagueRankingResponse getLeagueRanking(Long userId, int size) {
+        User me = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(GlobalError.INVALID_VALUE));
 
-		User me = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(GlobalError.INVALID_VALUE));
+        UserTier tier = me.getTier();
+        PageRequest pageRequest = PageRequest.of(0, size);
 
-		UserTier tier = me.getTier();
-		PageRequest pageRequest = PageRequest.of(0, size);
+        List<User> users = userRepository.findAllByTierOrderByPointDesc(tier, pageRequest);
+        long totalUserCount = userRepository.countByTier(tier);
 
-		List<User> users = userRepository.findAllByTierOrderByPointDesc(tier, pageRequest);
-		long totalUserCount = userRepository.countByTier(tier);
+        List<LeagueRankingUserResponse> rankingList = new ArrayList<>();
+        int myRank = 0;
+        int rank = 0;
+        int index = 0;
+        Integer previousPoint = null;
 
-		List<LeagueRankingUserResponse> rankingList = new ArrayList<>();
-		int myRank = 0;
-		int rank = 1;
         for (User user : users) {
+            index++;
+
+            if (previousPoint == null || !previousPoint.equals(user.getPoint())) {
+                rank = index;
+            }
 
             boolean active = isActive(user.getLastLoginAt());
 
             String profileImageUrl = user.getUserCharacters().stream()
                     .filter(UserCharacter::isActive)
                     .findFirst()
-                    .map(uc -> uc.getCharacter().getImageUrl())
+                    .map(userCharacter -> userCharacter.getCharacter().getImageUrl())
                     .orElse(null);
 
             LeagueRankingUserResponse rankingUserResponse = LeagueRankingUserResponse.builder()
@@ -68,106 +75,114 @@ public class LeagueService {
                 myRank = rank;
             }
 
-            rank++;
+            previousPoint = user.getPoint();
         }
 
-        String profileImageUrl = me.getUserCharacters().stream()
+        String myProfileImageUrl = me.getUserCharacters().stream()
                 .filter(UserCharacter::isActive)
                 .findFirst()
-                .map(uc -> uc.getCharacter().getImageUrl())
+                .map(userCharacter -> userCharacter.getCharacter().getImageUrl())
                 .orElse(null);
 
         MyLeagueInfoResponse myInfo = MyLeagueInfoResponse.builder()
                 .nickname(me.getNickname())
-                .profileImageUrl(profileImageUrl)
+                .profileImageUrl(myProfileImageUrl)
                 .point(me.getPoint())
                 .tier(me.getTier().getLabel())
                 .rank(myRank)
                 .lastLoginAt(formatLastLogin(me.getLastLoginAt()))
                 .isActive(isActive(me.getLastLoginAt()))
                 .build();
-		LocalDateTime endTime = getNextResetTime();
-		String remainingTime = calculateRemainingTime(endTime);
 
-		return LeagueRankingResponse.builder()
-			.myInfo(myInfo)
-			.remainingTime(remainingTime)
-			.totalUserCount((int)totalUserCount)
-			.rankings(rankingList)
-			.build();
-	}
+        LocalDateTime endTime = getNextResetTime();
+        String remainingTime = calculateRemainingTime(endTime);
 
-	// 다음 랭킹 리셋 시간 계산
-	private LocalDateTime getNextResetTime() {
-		return LocalDateTime.now()
-			.plusDays(1)
-			.withHour(0)
-			.withMinute(0)
-			.withSecond(0)
-			.withNano(0);
-	}
+        return LeagueRankingResponse.builder()
+                .myInfo(myInfo)
+                .remainingTime(remainingTime)
+                .totalUserCount((int)totalUserCount)
+                .rankings(rankingList)
+                .build();
+    }
 
-	// 활동중 여부 계산
-	private boolean isActive(LocalDateTime lastLoginAt) {
-		if (lastLoginAt == null) {
-			return false;
-		}
+    // 다음 랭킹 리셋 시간 계산
+    private LocalDateTime getNextResetTime() {
+        return LocalDateTime.now()
+                .plusDays(1)
+                .withHour(0)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
+    }
 
-		return lastLoginAt.isAfter(LocalDateTime.now().minusMinutes(5));
-	}
+    // 활동중 여부 계산
+    private boolean isActive(LocalDateTime lastLoginAt) {
+        if (lastLoginAt == null) {
+            return false;
+        }
 
-	// 마지막 접속 시간 문자열 변환
-	private String formatLastLogin(LocalDateTime lastLoginAt) {
-		if (lastLoginAt == null) {
-			return "정보 없음";
-		}
+        return lastLoginAt.isAfter(LocalDateTime.now().minusMinutes(5));
+    }
 
-		Duration duration = Duration.between(lastLoginAt, LocalDateTime.now());
+    // 마지막 접속 시간 문자열 변환
+    private String formatLastLogin(LocalDateTime lastLoginAt) {
+        if (lastLoginAt == null) {
+            return "정보 없음";
+        }
 
-		long minutes = duration.toMinutes();
-		long hours = duration.toHours();
-		long days = duration.toDays();
+        Duration duration = Duration.between(lastLoginAt, LocalDateTime.now());
 
-		if (minutes < 60) {
-			return minutes + "분 전";
-		}
+        long minutes = duration.toMinutes();
+        long hours = duration.toHours();
+        long days = duration.toDays();
 
-		if (hours < 24) {
-			return hours + "시간 전";
-		}
+        if (minutes < 60) {
+            return minutes + "분 전";
+        }
 
-		return days + "일 전";
-	}
+        if (hours < 24) {
+            return hours + "시간 전";
+        }
 
-	// 랭킹 재배치 남은 시간 계산
-	private String calculateRemainingTime(LocalDateTime endTime) {
-		Duration duration = Duration.between(LocalDateTime.now(), endTime);
+        return days + "일 전";
+    }
 
-		long days = duration.toDays();
-		long hours = duration.toHours() % 24;
-		long minutes = duration.toMinutes() % 60;
+    // 랭킹 재배치 남은 시간 계산
+    private String calculateRemainingTime(LocalDateTime endTime) {
+        Duration duration = Duration.between(LocalDateTime.now(), endTime);
 
-		return days + "일 " + hours + "시간 " + minutes + "분";
-	}
+        long days = duration.toDays();
+        long hours = duration.toHours() % 24;
+        long minutes = duration.toMinutes() % 60;
 
-	// 선택한 리그 랭킹 조회
-	public LeagueSelectedRankingResponse getLeagueSelectedRanking(UserTier selectedTier, int size) {
-		PageRequest pageRequest = PageRequest.of(0, size);
+        return days + "일 " + hours + "시간 " + minutes + "분";
+    }
 
-		List<User> users = userRepository.findAllByTierOrderByPointDesc(selectedTier, pageRequest);
-		long totalUserCount = userRepository.countByTier(selectedTier);
+    // 선택한 리그 랭킹 조회
+    public LeagueSelectedRankingResponse getLeagueSelectedRanking(UserTier selectedTier, int size) {
+        PageRequest pageRequest = PageRequest.of(0, size);
 
-		List<LeagueRankingUserResponse> rankingList = new ArrayList<>();
-		int rank = 1;
+        List<User> users = userRepository.findAllByTierOrderByPointDesc(selectedTier, pageRequest);
+        long totalUserCount = userRepository.countByTier(selectedTier);
+
+        List<LeagueRankingUserResponse> rankingList = new ArrayList<>();
+        int rank = 0;
+        int index = 0;
+        Integer previousPoint = null;
 
         for (User user : users) {
+            index++;
+
+            if (previousPoint == null || !previousPoint.equals(user.getPoint())) {
+                rank = index;
+            }
 
             boolean active = isActive(user.getLastLoginAt());
 
             String profileImageUrl = user.getUserCharacters().stream()
                     .filter(UserCharacter::isActive)
                     .findFirst()
-                    .map(uc -> uc.getCharacter().getImageUrl())
+                    .map(userCharacter -> userCharacter.getCharacter().getImageUrl())
                     .orElse(null);
 
             LeagueRankingUserResponse rankingUserResponse = LeagueRankingUserResponse.builder()
@@ -180,14 +195,16 @@ public class LeagueService {
                     .build();
 
             rankingList.add(rankingUserResponse);
-            rank++;
-        }
-		String remainingTime = calculateRemainingTime(getNextResetTime());
 
-		return LeagueSelectedRankingResponse.builder()
-			.remainingTime(remainingTime)
-			.totalUserCount((int)totalUserCount)
-			.rankings(rankingList)
-			.build();
-	}
+            previousPoint = user.getPoint();
+        }
+
+        String remainingTime = calculateRemainingTime(getNextResetTime());
+
+        return LeagueSelectedRankingResponse.builder()
+                .remainingTime(remainingTime)
+                .totalUserCount((int)totalUserCount)
+                .rankings(rankingList)
+                .build();
+    }
 }

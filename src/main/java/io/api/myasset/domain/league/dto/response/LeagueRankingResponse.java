@@ -10,7 +10,7 @@ import lombok.Getter;
 @Builder
 public class LeagueRankingResponse {
 	private MyLeagueInfoResponse myInfo;
-	private String remainingTime;
+	private String remainingTime; //초기화까지 남은 시간
 	private Integer totalUserCount;
 	private List<LeagueRankingUserResponse> rankings;
 }
