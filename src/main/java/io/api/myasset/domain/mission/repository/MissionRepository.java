@@ -20,4 +20,12 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
     List<Mission> findTodayMissions(Long userId, LocalDate missionDate);
 
     Optional<Mission> findByIdAndUserId(Long id, Long userId);
+
+    @Query("""
+            select case when count(m) > 0 then true else false end
+            from Mission m
+            where m.userId = :userId
+              and m.recommendationId = :recommendationId
+            """)
+    boolean existsAcceptedMission(Long userId, String recommendationId);
 }
