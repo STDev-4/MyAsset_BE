@@ -50,11 +50,16 @@ public class CardApprovalParser {
 
 	private CardApproval toEntity(Map<String, String> record, String connectedId) {
 		try {
-			String merchantType = record.get("resMemberStoreType");
+			String merchantTypeRaw = record.get("resMemberStoreType");
 			String approvalDate = record.get("resUsedDate");
 			String amountStr = record.get("resUsedAmount");
 
-			if (merchantType == null || approvalDate == null || amountStr == null) {
+			if (merchantTypeRaw == null || approvalDate == null || amountStr == null) {
+				return null;
+			}
+
+			String merchantType = sanitizeMerchantType(merchantTypeRaw);
+			if (merchantType.isEmpty()) {
 				return null;
 			}
 
@@ -69,5 +74,36 @@ public class CardApprovalParser {
 				connectedId, record);
 			return null;
 		}
+	}
+
+	/**
+	 * CODEF 업종명 정규화.
+	 * <p>
+	 * CODEF 는 고정 길이로 잘린 값을 반환하여 끝에 {@code ?} 가 붙거나
+	 * ".", ",", "(", ")", "/" 같은 구분자가 섞여 있음.
+	 * <ul>
+	 *   <li>중간 특수문자 → 공백으로 치환 (의미 단위 구분 유지)</li>
+	 *   <li>끝 특수문자   → {@code trim()} 으로 자연 제거</li>
+	 *   <li>연속 공백    → 1개로 축소</li>
+	 * </ul>
+	 * <p>
+	 * 예:
+	 * <ul>
+	 *   <li>"아이스크림전문?"    → "아이스크림전문"</li>
+	 *   <li>"PG일반(비인증)"     → "PG일반 비인증"</li>
+	 *   <li>"슈퍼마켓.마트"       → "슈퍼마켓 마트"</li>
+	 *   <li>"오락실/PC방"        → "오락실 PC방"</li>
+	 *   <li>"기타교육.교습.?"    → "기타교육 교습"</li>
+	 *   <li>"판촉물.인쇄.복?"    → "판촉물 인쇄 복"</li>
+	 * </ul>
+	 */
+	public static String sanitizeMerchantType(String raw) {
+		if (raw == null) {
+			return "";
+		}
+		return raw
+			.replaceAll("[^가-힣a-zA-Z0-9]", " ")
+			.replaceAll("\\s+", " ")
+			.trim();
 	}
 }

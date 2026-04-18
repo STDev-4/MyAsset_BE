@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import io.api.myasset.domain.approval.application.SyncStatusService;
 import io.api.myasset.global.batch.event.BankLinkedEvent;
 import io.api.myasset.global.batch.job.codefsync.CodefSyncJobConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class CodefSyncJobLauncher {
 
 	private final JobOperator jobOperator;
 	private final Job codefSyncJob;
+	private final SyncStatusService syncStatusService;
 
 	/**
 	 * Lombok 이 {@code @Qualifier} 를 생성자 파라미터로 복사하지 않는 경우에 대비해
@@ -39,9 +41,11 @@ public class CodefSyncJobLauncher {
 		@Qualifier("asyncJobOperator")
 		JobOperator jobOperator,
 		@Qualifier(CodefSyncJobConfig.JOB_NAME)
-		Job codefSyncJob) {
+		Job codefSyncJob,
+		SyncStatusService syncStatusService) {
 		this.jobOperator = jobOperator;
 		this.codefSyncJob = codefSyncJob;
+		this.syncStatusService = syncStatusService;
 	}
 
 	public void launchForAll() {
@@ -53,12 +57,15 @@ public class CodefSyncJobLauncher {
 	}
 
 	/**
-	 * CodefLinkService 가 발행한 BankLinkedEvent 를 트랜잭션 커밋 이후 수신해 Job 을 실행한다.
-	 * 커밋 이전 실행 시 Job 이 아직 저장되지 않은 connectedId 를 보게 되므로 AFTER_COMMIT 필수.
+	 * BankLinkedEvent 수신 시 단건 Job 을 실행한다.
+	 * Job 은 내부적으로 Step 1 (CODEF → DB) + Step 2 (DB → Redis warm) 를 순차 수행하므로,
+	 * 이 한 번의 호출로 신규 유저의 소비 데이터 적재 + 캐시 pre-warm 이 모두 완료된다.
 	 */
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void onBankLinked(BankLinkedEvent event) {
-		log.info("[CodefSyncJob] BankLinkedEvent 수신 - userId={}", event.userId());
+		log.info("[CodefSyncJob] BankLinkedEvent 수신, 단건 Sync + Cache warm 실행 예약 - userId={}",
+			event.userId());
+		syncStatusService.markInProgress(event.userId());
 		launchForUser(event.userId());
 	}
 
@@ -78,6 +85,9 @@ public class CodefSyncJobLauncher {
 		} catch (Exception e) {
 			log.error("[CodefSyncJob] 기동 실패 - userId={}, reason={}",
 				userId, e.getMessage(), e);
+			if (userId != null) {
+				syncStatusService.markFailed(userId);
+			}
 		}
 	}
 }
