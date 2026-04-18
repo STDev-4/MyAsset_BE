@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CardApprovalParser {
 
 	private final ObjectMapper objectMapper;
+	private final MerchantTypeResolver merchantTypeResolver;
 
 	/**
 	 * CODEF 응답을 파싱한다. 데이터가 없으면 빈 리스트를 반환한다 (예외 X).
@@ -50,15 +51,19 @@ public class CardApprovalParser {
 
 	private CardApproval toEntity(Map<String, String> record, String connectedId) {
 		try {
-			String merchantTypeRaw = record.get("resMemberStoreType");
+			String rawType = record.get("resMemberStoreType");
+			String rawName = record.get("resMemberStoreName");
 			String approvalDate = record.get("resUsedDate");
 			String amountStr = record.get("resUsedAmount");
 
-			if (merchantTypeRaw == null || approvalDate == null || amountStr == null) {
+			if (approvalDate == null || amountStr == null) {
+				return null;
+			}
+			if (rawType == null && rawName == null) {
 				return null;
 			}
 
-			String merchantType = sanitizeMerchantType(merchantTypeRaw);
+			String merchantType = merchantTypeResolver.resolve(rawType, rawName);
 			if (merchantType.isEmpty()) {
 				return null;
 			}
