@@ -19,63 +19,60 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class MissionDashboardService {
 
-	private final MissionRepository missionRepository;
-	private final UserRepository userRepository;
+    private final MissionRepository missionRepository;
+    private final UserRepository userRepository;
 
-	@Transactional(readOnly = true)
-	public MissionStatusCardResponse getMissionStatusCard(Long userId) {
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
+    @Transactional(readOnly = true)
+    public MissionStatusCardResponse getMissionStatusCard(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
 
-		LocalDate today = LocalDate.now();
-		LocalDate yesterday = today.minusDays(1);
+        LocalDate today = LocalDate.now();
 
-		int todayTotal = missionRepository.countByUserIdAndMissionDate(userId, today);
-		int todayStarted = missionRepository.countByUserIdAndMissionDateAndStatusNot(
-			userId, today, MissionStatus.READY);
+        int todayTotal = missionRepository.countByUserIdAndMissionDate(userId, today);
 
-		int yesterdayTotal = missionRepository.countByUserIdAndMissionDate(userId, yesterday);
-		int yesterdayCompleted = missionRepository.countByUserIdAndMissionDateAndStatus(
-			userId, yesterday, MissionStatus.COMPLETED);
+        int todayInProgress = missionRepository.countByUserIdAndMissionDateAndStatus(
+                userId, today, MissionStatus.IN_PROGRESS);
 
-		int yesterdayPercent = yesterdayTotal == 0 ? 0 : (yesterdayCompleted * 100) / yesterdayTotal;
+        int progressPercent = todayTotal == 0 ? 0 : (todayInProgress * 100) / todayTotal;
 
-		String remainingTime = formatRemainingTime(LocalDateTime.now(), today.atTime(23, 59, 59));
+        String remainingTime = formatRemainingTime(LocalDateTime.now(), today.atTime(23, 59, 59));
 
-		int totalPoint = user.getPoint();
-		int pointToNextTier = calculatePointToNextTier(user);
+        int totalPoint = user.getPoint();
+        int pointToNextTier = calculatePointToNextTier(user);
 
-		return new MissionStatusCardResponse(
-			todayStarted,
-			todayTotal,
-			yesterdayPercent,
-			remainingTime,
-			totalPoint,
-			pointToNextTier);
-	}
+        return new MissionStatusCardResponse(
+                todayInProgress,
+                todayTotal,
+                progressPercent,
+                remainingTime,
+                totalPoint,
+                pointToNextTier
+        );
+    }
 
-	private String formatRemainingTime(LocalDateTime now, LocalDateTime target) {
-		if (now.isAfter(target)) {
-			return "00:00:00";
-		}
+    private String formatRemainingTime(LocalDateTime now, LocalDateTime target) {
+        if (now.isAfter(target)) {
+            return "00:00:00";
+        }
 
-		Duration duration = Duration.between(now, target);
-		long seconds = duration.getSeconds();
+        Duration duration = Duration.between(now, target);
+        long seconds = duration.getSeconds();
 
-		long hour = seconds / 3600;
-		long minute = (seconds % 3600) / 60;
-		long second = seconds % 60;
+        long hour = seconds / 3600;
+        long minute = (seconds % 3600) / 60;
+        long second = seconds % 60;
 
-		return String.format("%02d:%02d:%02d", hour, minute, second);
-	}
+        return String.format("%02d:%02d:%02d", hour, minute, second);
+    }
 
-	private int calculatePointToNextTier(User user) {
-		Integer nextTierRequiredPoint = user.getTier().getNextTierRequiredPoint();
+    private int calculatePointToNextTier(User user) {
+        Integer nextTierRequiredPoint = user.getTier().getNextTierRequiredPoint();
 
-		if (nextTierRequiredPoint == null) {
-			return 0;
-		}
+        if (nextTierRequiredPoint == null) {
+            return 0;
+        }
 
-		return Math.max(nextTierRequiredPoint - user.getPoint(), 0);
-	}
+        return Math.max(nextTierRequiredPoint - user.getPoint(), 0);
+    }
 }
