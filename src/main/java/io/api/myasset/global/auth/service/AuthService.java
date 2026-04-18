@@ -4,6 +4,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.api.myasset.domain.character.entity.UserCharacter;
+import io.api.myasset.domain.character.repository.CharacterRepository;
+import io.api.myasset.domain.character.repository.UserCharacterRepository;
 import io.api.myasset.domain.user.entity.User;
 import io.api.myasset.domain.user.exception.UserError;
 import io.api.myasset.domain.user.repository.UserRepository;
@@ -26,6 +29,8 @@ import java.time.LocalDateTime;
 public class AuthService {
 
 	private final UserRepository userRepository;
+	private final CharacterRepository characterRepository;
+	private final UserCharacterRepository userCharacterRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtProvider jwtProvider;
 	private final JwtProperties jwtProperties;
@@ -53,10 +58,18 @@ public class AuthService {
 			request.nickname(),
 			request.birthDate());
 
+
         user.updateLastLoginAt(LocalDateTime.now());
 
         User saved = userRepository.save(user);
         TokenPair tokens = issueTokens(saved);
+
+
+		// 기본 캐릭터(coinPrice=0) 배정 — 캐릭터가 없으면 스킵
+		characterRepository.findFirstByCoinPrice(0)
+			.map(character -> UserCharacter.assignDefault(saved, character))
+			.ifPresent(userCharacterRepository::save);
+
 
 		return new SignupResult(SignupResponse.from(saved), tokens);
 	}
