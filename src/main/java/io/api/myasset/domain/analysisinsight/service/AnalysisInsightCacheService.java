@@ -19,46 +19,46 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnalysisInsightCacheService {
 
-    private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;
+	private final RedisTemplate<String, String> redisTemplate;
+	private final ObjectMapper objectMapper;
 
-    public List<AnalysisInsightItemResponse> getInsights(Long userId, LocalDate date) {
-        String key = createInsightKey(userId, date);
-        String json = redisTemplate.opsForValue().get(key);
+	public List<AnalysisInsightItemResponse> getInsights(Long userId, LocalDate date) {
+		String key = createInsightKey(userId, date);
+		String json = redisTemplate.opsForValue().get(key);
 
-        if (json == null || json.isBlank()) {
-            return null;
-        }
+		if (json == null || json.isBlank()) {
+			return null;
+		}
 
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<AnalysisInsightItemResponse>>() {});
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(AnalysisError.INSIGHT_REDIS_DESERIALIZE_ERROR);
-        }
-    }
+		try {
+			return objectMapper.readValue(json, new TypeReference<List<AnalysisInsightItemResponse>>() {});
+		} catch (JsonProcessingException e) {
+			throw new BusinessException(AnalysisError.INSIGHT_REDIS_DESERIALIZE_ERROR);
+		}
+	}
 
-    public void saveInsights(Long userId, LocalDate date, List<AnalysisInsightItemResponse> insights) {
-        String key = createInsightKey(userId, date);
+	public void saveInsights(Long userId, LocalDate date, List<AnalysisInsightItemResponse> insights) {
+		String key = createInsightKey(userId, date);
 
-        try {
-            String json = objectMapper.writeValueAsString(insights);
-            redisTemplate.opsForValue().set(key, json, getDurationUntilEndOfDay());
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(AnalysisError.INSIGHT_REDIS_SERIALIZE_ERROR);
-        }
-    }
+		try {
+			String json = objectMapper.writeValueAsString(insights);
+			redisTemplate.opsForValue().set(key, json, getDurationUntilEndOfDay());
+		} catch (JsonProcessingException e) {
+			throw new BusinessException(AnalysisError.INSIGHT_REDIS_SERIALIZE_ERROR);
+		}
+	}
 
-    public void evictInsights(Long userId, LocalDate date) {
-        redisTemplate.delete(createInsightKey(userId, date));
-    }
+	public void evictInsights(Long userId, LocalDate date) {
+		redisTemplate.delete(createInsightKey(userId, date));
+	}
 
-    private String createInsightKey(Long userId, LocalDate date) {
-        return "analysis:insights:" + userId + ":" + date.toString().replace("-", "");
-    }
+	private String createInsightKey(Long userId, LocalDate date) {
+		return "analysis:insights:" + userId + ":" + date.toString().replace("-", "");
+	}
 
-    private Duration getDurationUntilEndOfDay() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
-        return Duration.between(now, endOfDay);
-    }
+	private Duration getDurationUntilEndOfDay() {
+		LocalDateTime now = LocalDateTime.now();
+		LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
+		return Duration.between(now, endOfDay);
+	}
 }

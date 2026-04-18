@@ -13,30 +13,27 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class GptExecutor {
 
-    private final GptService gptService;
-    private final GeneralSystemPrompt generalSystemPrompt = new GeneralSystemPrompt();
+	private final GptService gptService;
+	private final GeneralSystemPrompt generalSystemPrompt = new GeneralSystemPrompt();
 
-    public <T> T execute(
-            PromptTemplate domainPrompt,
-            PromptTemplate dataPrompt,
-            Integer maxTokens,
-            Class<T> responseType
-    ) {
-        PromptTemplate composedPrompt =
-                generalSystemPrompt.compose(domainPrompt, dataPrompt);
-        String systemMessage = composedPrompt.render();
+	public <T> T execute(
+		PromptTemplate domainPrompt,
+		PromptTemplate dataPrompt,
+		Integer maxTokens,
+		Class<T> responseType) {
+		PromptTemplate composedPrompt = generalSystemPrompt.compose(domainPrompt, dataPrompt);
+		String systemMessage = composedPrompt.render();
 
-        GptRequest request = new GptRequest(
-                systemMessage,
-                maxTokens != null ? maxTokens : 300
-        );
+		GptRequest request = new GptRequest(
+			systemMessage,
+			maxTokens != null ? maxTokens : 300);
 
-        String rawContent = gptService.callGpt(request);
+		String rawContent = gptService.callGpt(request);
 
-        if (rawContent == null) {
-            throw new BusinessException(GptErrorCode.GPT_RESPONSE_FORMAT_ERROR);
-        }
+		if (rawContent == null) {
+			throw new BusinessException(GptErrorCode.GPT_RESPONSE_FORMAT_ERROR);
+		}
 
-        return gptService.parseJson(rawContent, responseType);
-    }
+		return gptService.parseJson(rawContent, responseType);
+	}
 }

@@ -12,25 +12,24 @@ import java.util.List;
 @Getter
 public class GptRequest {
 
-    private String model = "gpt-4.1-mini";
+	private String model = "gpt-4.1-mini";
 
-    @JsonProperty("max_tokens")
-    @Setter
-    private Integer maxTokens;
+	@JsonProperty("max_tokens")
+	@Setter
+	private Integer maxTokens;
 
-    private List<Message> messages;
+	private List<Message> messages;
 
-    public GptRequest(String systemMessage, Integer maxTokens) {
-        this.messages = List.of(
-                new Message("system", systemMessage)
-        );
-        this.maxTokens = maxTokens;
-    }
+	public GptRequest(String systemMessage, Integer maxTokens) {
+		this.messages = List.of(
+			new Message("system", systemMessage));
+		this.maxTokens = maxTokens;
+	}
 
-    @Getter
-    @AllArgsConstructor
-    public static class Message {
-        private String role;
-        private String content;
-    }
+	@Getter
+	@AllArgsConstructor
+	public static class Message {
+		private String role;
+		private String content;
+	}
 }

@@ -13,11 +13,11 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "batch.scheduler.enabled", havingValue = "true", matchIfMissing = false)
 public class MissionEvaluationScheduler {
 
-    private final MissionEvaluationService missionEvaluationService;
+	private final MissionEvaluationService missionEvaluationService;
 
-    @Scheduled(cron = "0 0 8 * * *")
-    public void evaluateMissions() {
-        log.info("[MissionEvaluationScheduler] 오전 8시 자동 판정 시작");
-        missionEvaluationService.evaluateExpiredMissions();
-    }
+	@Scheduled(cron = "0 0 8 * * *")
+	public void evaluateMissions() {
+		log.info("[MissionEvaluationScheduler] 오전 8시 자동 판정 시작");
+		missionEvaluationService.evaluateExpiredMissions();
+	}
 }

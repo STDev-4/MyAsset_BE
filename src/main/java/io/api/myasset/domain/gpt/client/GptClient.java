@@ -16,46 +16,45 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Component
 public class GptClient extends ApiClient {
 
-    public GptClient(@Qualifier("gptWebClient") WebClient webClient) {
-        super(webClient);
-    }
+	public GptClient(@Qualifier("gptWebClient")
+	WebClient webClient) {
+		super(webClient);
+	}
 
-    public GptResponse requestCompletion(GptRequest request) {
-        try {
-            log.info("[GptClient] GPT 요청 시작 - model={}", request.getModel());
-            log.debug("[GptClient] request={}", request);
+	public GptResponse requestCompletion(GptRequest request) {
+		try {
+			log.info("[GptClient] GPT 요청 시작 - model={}", request.getModel());
+			log.debug("[GptClient] request={}", request);
 
-            GptResponse response = post(
-                    uri -> uri.path("/chat/completions").build(),
-                    request,
-                    GptResponse.class
-            );
+			GptResponse response = post(
+				uri -> uri.path("/chat/completions").build(),
+				request,
+				GptResponse.class);
 
-            log.info("[GptClient] GPT 응답 성공");
-            log.debug("[GptClient] response={}", response);
+			log.info("[GptClient] GPT 응답 성공");
+			log.debug("[GptClient] response={}", response);
 
-            return response;
+			return response;
 
-        } catch (WebClientResponseException.TooManyRequests e) {
-            log.error("[GptClient] 429 Too Many Requests - body={}", e.getResponseBodyAsString(), e);
-            throw new BusinessException(GptErrorCode.GPT_TOO_MANY_REQUESTS);
+		} catch (WebClientResponseException.TooManyRequests e) {
+			log.error("[GptClient] 429 Too Many Requests - body={}", e.getResponseBodyAsString(), e);
+			throw new BusinessException(GptErrorCode.GPT_TOO_MANY_REQUESTS);
 
-        } catch (WebClientResponseException e) {
-            log.error(
-                    "[GptClient] GPT API 오류 - status={}, body={}",
-                    e.getStatusCode(),
-                    e.getResponseBodyAsString(),
-                    e
-            );
-            throw new BusinessException(GptErrorCode.GPT_API_ERROR);
+		} catch (WebClientResponseException e) {
+			log.error(
+				"[GptClient] GPT API 오류 - status={}, body={}",
+				e.getStatusCode(),
+				e.getResponseBodyAsString(),
+				e);
+			throw new BusinessException(GptErrorCode.GPT_API_ERROR);
 
-        } catch (ReadTimeoutException e) {
-            log.error("[GptClient] GPT Timeout", e);
-            throw new BusinessException(GptErrorCode.GPT_TIMEOUT);
+		} catch (ReadTimeoutException e) {
+			log.error("[GptClient] GPT Timeout", e);
+			throw new BusinessException(GptErrorCode.GPT_TIMEOUT);
 
-        } catch (Exception e) {
-            log.error("[GptClient] GPT Unknown Error - request={}", request, e);
-            throw new BusinessException(GptErrorCode.GPT_UNKNOWN_ERROR);
-        }
-    }
+		} catch (Exception e) {
+			log.error("[GptClient] GPT Unknown Error - request={}", request, e);
+			throw new BusinessException(GptErrorCode.GPT_UNKNOWN_ERROR);
+		}
+	}
 }

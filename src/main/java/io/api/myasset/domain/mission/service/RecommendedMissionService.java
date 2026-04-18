@@ -22,99 +22,94 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RecommendedMissionService {
 
-    private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+	private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    private final GptExecutor gptExecutor;
-    private final RecommendedMissionDomainPrompt recommendedMissionDomainPrompt;
-    private final MissionCacheService missionCacheService;
-    private final ApprovalService approvalService;
+	private final GptExecutor gptExecutor;
+	private final RecommendedMissionDomainPrompt recommendedMissionDomainPrompt;
+	private final MissionCacheService missionCacheService;
+	private final ApprovalService approvalService;
 
-    public List<RecommendedMissionResponse> getRecommendedMissions(Long userId) {
-        LocalDate today = LocalDate.now();
+	public List<RecommendedMissionResponse> getRecommendedMissions(Long userId) {
+		LocalDate today = LocalDate.now();
 
-        List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
-        if (cached != null && !cached.isEmpty()) {
-            return cached.stream()
-                    .map(item -> new RecommendedMissionResponse(
-                            item.recommendationId(),
-                            item.title(),
-                            item.description(),
-                            item.iconType(),
-                            item.rewardPoint(),
-                            item.expectedSavingAmount()
-                    ))
-                    .toList();
-        }
+		List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
+		if (cached != null && !cached.isEmpty()) {
+			return cached.stream()
+				.map(item -> new RecommendedMissionResponse(
+					item.recommendationId(),
+					item.title(),
+					item.description(),
+					item.iconType(),
+					item.rewardPoint(),
+					item.expectedSavingAmount()))
+				.toList();
+		}
 
-        String endDate = YearMonth.now()
-                .minusMonths(1)
-                .atEndOfMonth()
-                .format(YYYYMMDD);
+		String endDate = YearMonth.now()
+			.minusMonths(1)
+			.atEndOfMonth()
+			.format(YYYYMMDD);
 
-        SpendingTopResponse topSpending = approvalService.getTopSpending(userId, endDate, 3);
+		SpendingTopResponse topSpending = approvalService.getTopSpending(userId, endDate, 3);
 
-        String spendingData = buildSpendingDataPrompt(topSpending);
+		String spendingData = buildSpendingDataPrompt(topSpending);
 
-        PromptTemplate dataPrompt = new DataPrompt(
-                "사용자 소비 데이터",
-                spendingData
-        );
+		PromptTemplate dataPrompt = new DataPrompt(
+			"사용자 소비 데이터",
+			spendingData);
 
-        GptRecommendedMissionResponse gptResponse = gptExecutor.execute(
-                recommendedMissionDomainPrompt,
-                dataPrompt,
-                700,
-                GptRecommendedMissionResponse.class
-        );
+		GptRecommendedMissionResponse gptResponse = gptExecutor.execute(
+			recommendedMissionDomainPrompt,
+			dataPrompt,
+			700,
+			GptRecommendedMissionResponse.class);
 
-        List<CachedRecommendedMission> cacheItems = gptResponse.missions().stream()
-                .map(item -> new CachedRecommendedMission(
-                        UUID.randomUUID().toString(),
-                        item.title(),
-                        item.description(),
-                        item.iconType(),
-                        item.rewardPoint(),
-                        item.expectedSavingAmount(),
-                        item.behaviorInsights(),
-                        item.statisticalReasons()
-                ))
-                .toList();
+		List<CachedRecommendedMission> cacheItems = gptResponse.missions().stream()
+			.map(item -> new CachedRecommendedMission(
+				UUID.randomUUID().toString(),
+				item.title(),
+				item.description(),
+				item.iconType(),
+				item.rewardPoint(),
+				item.expectedSavingAmount(),
+				item.behaviorInsights(),
+				item.statisticalReasons()))
+			.toList();
 
-        missionCacheService.saveRecommendedMissionCache(userId, today, cacheItems);
+		missionCacheService.saveRecommendedMissionCache(userId, today, cacheItems);
 
-        return cacheItems.stream()
-                .map(item -> new RecommendedMissionResponse(
-                        item.recommendationId(),
-                        item.title(),
-                        item.description(),
-                        item.iconType(),
-                        item.rewardPoint(),
-                        item.expectedSavingAmount()
-                ))
-                .toList();
-    }
+		return cacheItems.stream()
+			.map(item -> new RecommendedMissionResponse(
+				item.recommendationId(),
+				item.title(),
+				item.description(),
+				item.iconType(),
+				item.rewardPoint(),
+				item.expectedSavingAmount()))
+			.toList();
+	}
 
-    private String buildSpendingDataPrompt(SpendingTopResponse topSpending) {
-        if (topSpending == null || topSpending.items() == null || topSpending.items().isEmpty()) {
-            return """
-                    - 지난달 소비 데이터가 충분하지 않다.
-                    - 식비, 카페, 쇼핑, 교통 등 일상 소비에서 바로 줄일 수 있는 절약 미션을 추천한다.
-                    - 오늘 바로 실천 가능한 수준의 미션만 제안한다.
-                    """;
-        }
+	private String buildSpendingDataPrompt(SpendingTopResponse topSpending) {
+		if (topSpending == null || topSpending.items() == null || topSpending.items().isEmpty()) {
+			return """
+				- 지난달 소비 데이터가 충분하지 않다.
+				- 식비, 카페, 쇼핑, 교통 등 일상 소비에서 바로 줄일 수 있는 절약 미션을 추천한다.
+				- 오늘 바로 실천 가능한 수준의 미션만 제안한다.
+				""";
+		}
 
-        String top3Text = topSpending.items().stream()
-                .map(item -> "- " + item.rank() + "위: " + item.category() + " (" + item.amount() + "원)")
-                .reduce((a, b) -> a + "\n" + b)
-                .orElse("- 소비 데이터 없음");
+		String top3Text = topSpending.items().stream()
+			.map(item -> "- " + item.rank() + "위: " + item.category() + " (" + item.amount() + "원)")
+			.reduce((a, b) -> a + "\n" + b)
+			.orElse("- 소비 데이터 없음");
 
-        return """
-                - 사용자의 지난달 소비 상위 업종은 다음과 같다.
-                %s
-                - 반드시 위 상위 소비 업종을 우선 반영해서 미션을 생성한다.
-                - 소비가 큰 업종일수록 더 직접적으로 줄일 수 있는 행동 미션을 제안한다.
-                - 각 미션은 해당 소비 업종과 연결되어야 한다.
-                - 오늘 바로 실천 가능한 수준의 미션만 제안한다.
-                """.formatted(top3Text);
-    }
+		return """
+			- 사용자의 지난달 소비 상위 업종은 다음과 같다.
+			%s
+			- 반드시 위 상위 소비 업종을 우선 반영해서 미션을 생성한다.
+			- 소비가 큰 업종일수록 더 직접적으로 줄일 수 있는 행동 미션을 제안한다.
+			- 각 미션은 해당 소비 업종과 연결되어야 한다.
+			- 오늘 바로 실천 가능한 수준의 미션만 제안한다.
+			""".formatted(top3Text);
+	}
 }
