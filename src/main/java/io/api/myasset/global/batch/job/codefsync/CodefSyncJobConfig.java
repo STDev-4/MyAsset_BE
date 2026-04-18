@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.batch.core.configuration.annotation.JobScope;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
@@ -29,12 +29,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import io.api.myasset.domain.approval.application.ApprovalService;
 import io.api.myasset.domain.approval.application.CardApprovalParser;
+import io.api.myasset.domain.approval.application.SpendingCacheService;
+import io.api.myasset.domain.approval.application.dto.SpendResponse;
 import io.api.myasset.domain.approval.persistence.CardApproval;
 import io.api.myasset.domain.approval.persistence.CardApprovalRepository;
 import io.api.myasset.domain.user.entity.InstitutionType;
 import io.api.myasset.domain.user.entity.User;
 import io.api.myasset.domain.user.repository.UserRepository;
+import io.api.myasset.global.batch.listener.CodefSyncJobListener;
 import io.codef.api.EasyCodefClient;
 import io.codef.api.dto.EasyCodefRequest;
 import io.codef.api.dto.EasyCodefRequestBuilder;
@@ -45,11 +49,21 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * CODEF 카드 승인내역 동기화 Job 설정.
  * <p>
- * - JobParameters "userId" 존재 시: 단건 처리 (신규 유저 연동 직후 트리거 경로)
- * - JobParameters "userId" 없음: connectedId 를 가진 전체 유저 처리 (스케줄러 경로)
+ * Job 은 두 Step 으로 구성:
+ * <ol>
+ *   <li>{@code codefSyncStep} : CODEF 호출 → {@code card_approval} 적재</li>
+ *   <li>{@code spendingCacheWarmStep} : 방금 적재된 데이터로 {@link SpendResponse} 집계 → Redis 에 pre-warm</li>
+ * </ol>
  * <p>
- * Step 은 chunk 지향 처리로, 유저 단위로 CODEF 호출 → CardApproval 리스트 생성 → BULK INSERT.
- * UNIQUE 제약으로 인한 중복 예외는 경고 로그 후 무시한다.
+ * Step 2 의 존재 덕분에 런타임 GET /api/analysis/spending 요청은 Redis hit only 로 처리되어
+ * Cache Stampede 가 발생하지 않는다 (정상 운영 기준).
+ * <p>
+ * 두 실행 경로 모두 동일한 두 Step 을 순차 실행한다:
+ * <ul>
+ *   <li>정기 배치 (스케줄러) — JobParameters 에 userId 없음 → 전체 유저</li>
+ *   <li>신규 연동 (BankLinkedEvent) — JobParameters 에 userId 있음 → 해당 유저 단건.
+ *       Step 2 까지 포함되므로 가입 직후 첫 요청부터 cache hit 가능.</li>
+ * </ul>
  */
 @Slf4j
 @Configuration
@@ -57,7 +71,8 @@ import lombok.extern.slf4j.Slf4j;
 public class CodefSyncJobConfig {
 
 	public static final String JOB_NAME = "codefSyncJob";
-	public static final String STEP_NAME = "codefSyncStep";
+	public static final String STEP_SYNC_NAME = "codefSyncStep";
+	public static final String STEP_WARM_NAME = "spendingCacheWarmStep";
 	public static final String PARAM_USER_ID = "userId";
 	public static final String PARAM_RUN_AT = "runAt";
 
@@ -68,27 +83,32 @@ public class CodefSyncJobConfig {
 	private final CardApprovalRepository cardApprovalRepository;
 	private final CardApprovalParser cardApprovalParser;
 	private final EasyCodefClient codef;
+	private final ApprovalService approvalService;
+	private final SpendingCacheService cacheService;
 
 	@Bean(JOB_NAME)
-	public Job codefSyncJob(JobRepository jobRepository, Step codefSyncStep) {
+	public Job codefSyncJob(
+		JobRepository jobRepository,
+		Step codefSyncStep,
+		Step spendingCacheWarmStep,
+		CodefSyncJobListener jobListener) {
 		return new JobBuilder(JOB_NAME, jobRepository)
+			.listener(jobListener)
 			.start(codefSyncStep)
+			.next(spendingCacheWarmStep)
 			.build();
 	}
 
-	/**
-	 * {@link ItemReader} 는 {@code @JobScope} 프록시이므로 {@code userReader(null)} 로
-	 * 직접 호출하지 않고 Spring 주입을 받아야 한다.
-	 * <p>
-	 * Spring Batch 6 에서 {@code chunk(int, PlatformTransactionManager)} 가 deprecated 되어
-	 * {@code chunk(int)} + {@code transactionManager(...)} 체인으로 변경되었다.
-	 */
+	// ─────────────────────────────────────────────────────────
+	// Step 1. CODEF → card_approval
+	// ─────────────────────────────────────────────────────────
+
 	@Bean
 	public Step codefSyncStep(
 		JobRepository jobRepository,
 		PlatformTransactionManager txManager,
 		ItemReader<User> userReader) {
-		return new StepBuilder(STEP_NAME, jobRepository)
+		return new StepBuilder(STEP_SYNC_NAME, jobRepository)
 			.<User, List<CardApproval>>chunk(CHUNK_SIZE)
 			.reader(userReader)
 			.processor(fetchProcessor())
@@ -101,11 +121,13 @@ public class CodefSyncJobConfig {
 	}
 
 	/**
-	 * JobParameters 의 userId 유무로 단건/전체를 분기한다.
-	 * JobScope 로 선언돼 매 Job 실행 시점에 파라미터를 주입받는다.
+	 * JobParameters 의 userId 유무로 단건/전체를 분기.
+	 * <p>
+	 * {@code @StepScope} 로 선언하여 Step 1, Step 2 가 각자 새 인스턴스를 받는다
+	 * (ListItemReader 가 stateful 이므로 @JobScope 로 공유하면 Step 2 가 빈 리스트를 받게 됨).
 	 */
 	@Bean
-	@JobScope
+	@StepScope
 	public ItemReader<User> userReader(
 		@Value("#{jobParameters['" + PARAM_USER_ID + "']}")
 		Long userId) {
@@ -122,18 +144,16 @@ public class CodefSyncJobConfig {
 		return new ListItemReader<>(new ArrayList<>(users));
 	}
 
-	/**
-	 * 유저 1명 → 보유 카드 기관별 CODEF 호출 → CardApproval 리스트.
-	 * 기관별 호출 실패는 로그만 남기고 다른 기관으로 진행한다 (부분 성공 허용).
-	 */
 	private ItemProcessor<User, List<CardApproval>> fetchProcessor() {
 		return user -> {
 			String connectedId = user.getConnectedId();
 			List<InstitutionType> cardInstitutions = user.getCardInstitutions();
 
 			if (connectedId == null || cardInstitutions.isEmpty()) {
-				log.debug("[CodefSyncJob] 건너뜀 - userId={}, connectedId 없음 또는 카드 기관 없음",
-					user.getId());
+				log.warn(
+					"[CodefSyncJob] 건너뜀 - userId={}, connectedId={}, 카드기관수={} "
+						+ "(card 가 user_linked_institutions 에 존재하는지 확인 필요)",
+					user.getId(), connectedId, cardInstitutions.size());
 				return Collections.emptyList();
 			}
 
@@ -186,10 +206,6 @@ public class CodefSyncJobConfig {
 		};
 	}
 
-	/**
-	 * connectedId 별로 {@code [minDate, maxDate]} 범위의 기존 레코드를 한 번에 조회해
-	 * UNIQUE 키 조합 Set 을 만든 뒤, 들어온 리스트에서 해당 키와 겹치지 않는 것만 걸러낸다.
-	 */
 	private List<CardApproval> filterOutExisting(List<CardApproval> candidates) {
 		Map<String, List<CardApproval>> byConnectedId = candidates.stream()
 			.collect(Collectors.groupingBy(CardApproval::getConnectedId));
@@ -245,6 +261,82 @@ public class CodefSyncJobConfig {
 				a.getApprovalAmount());
 		}
 	}
+
+	// ─────────────────────────────────────────────────────────
+	// Step 2. card_approval → Redis pre-warm (지난달 + 이번달 둘 다 집계)
+	// ─────────────────────────────────────────────────────────
+
+	/**
+	 * Step 1 이 적재한 데이터를 기반으로 유저별 {@link SpendResponse} 를 집계해 Redis 에 기록한다.
+	 * <p>
+	 * <b>지난달 + 이번달 동시 세팅</b>:
+	 * <ul>
+	 *   <li>{@code last_month} key : 월말 기준 전체 데이터 — FE 의 기본 조회 대상</li>
+	 *   <li>{@code this_month} key : 오늘까지 부분 데이터 — 월 경계 (예: 5/1 00:00~04:00) 에서
+	 *       "지난달" 의 의미가 바뀌어도 cache hit 을 유지하기 위함</li>
+	 * </ul>
+	 * <p>
+	 * - 캐시 우회 경로 ({@link ApprovalService#computeSpendingFromDb}) 사용 → 어제자 stale cache 영향 없음
+	 * - chunk 실패 시 skip (일부 유저 warm 실패해도 Job 자체는 완료)
+	 */
+	@Bean
+	public Step spendingCacheWarmStep(
+		JobRepository jobRepository,
+		PlatformTransactionManager txManager,
+		ItemReader<User> userReader) {
+		return new StepBuilder(STEP_WARM_NAME, jobRepository)
+			.<User, List<CacheEntry>>chunk(CHUNK_SIZE)
+			.reader(userReader)
+			.processor(cacheWarmProcessor())
+			.writer(cacheWarmWriter())
+			.transactionManager(txManager)
+			.faultTolerant()
+			.skip(Exception.class)
+			.skipLimit(Integer.MAX_VALUE)
+			.build();
+	}
+
+	private ItemProcessor<User, List<CacheEntry>> cacheWarmProcessor() {
+		return user -> {
+			if (user.getConnectedId() == null) {
+				return null;
+			}
+
+			YearMonth lastMonth = YearMonth.now().minusMonths(1);
+			LocalDate today = LocalDate.now();
+
+			String lastEndDate = lastMonth.atEndOfMonth().format(DATE_FORMAT);
+			String thisEndDate = today.format(DATE_FORMAT);
+
+			SpendResponse lastResp = approvalService.computeSpendingFromDb(user.getId(), lastEndDate);
+			SpendResponse thisResp = approvalService.computeSpendingFromDb(user.getId(), thisEndDate);
+
+			return List.of(
+				new CacheEntry(user.getId(), SpendingCacheService.toYearMonth(lastEndDate), lastResp),
+				new CacheEntry(user.getId(), SpendingCacheService.toYearMonth(thisEndDate), thisResp));
+		};
+	}
+
+	private ItemWriter<List<CacheEntry>> cacheWarmWriter() {
+		return chunk -> {
+			int total = 0;
+			for (List<CacheEntry> entries : chunk.getItems()) {
+				for (CacheEntry entry : entries) {
+					cacheService.put(entry.userId(), entry.yearMonth(), entry.response());
+					total++;
+				}
+			}
+			log.info("[CodefSyncJob] 캐시 warm 완료 - {}건 (유저 {}명 × 지난달·이번달)",
+				total, chunk.getItems().size());
+		};
+	}
+
+	private record CacheEntry(Long userId, String yearMonth, SpendResponse response) {
+	}
+
+	// ─────────────────────────────────────────────────────────
+	// 공용 유틸
+	// ─────────────────────────────────────────────────────────
 
 	private EasyCodefResponse requestApproval(
 		String connectedId, InstitutionType institution, String startDate, String endDate) {
