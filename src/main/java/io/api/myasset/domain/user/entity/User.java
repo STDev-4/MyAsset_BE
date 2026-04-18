@@ -194,4 +194,10 @@ public class User {
 			this.tier = nextTier;
 		}
 	}
+    public void subtractPoint(int point) {
+        if (point <= 0) {
+            return;
+        }
+        this.point = Math.max(this.point - point, 0);
+    }
 }
