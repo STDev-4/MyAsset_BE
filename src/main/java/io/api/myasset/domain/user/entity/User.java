@@ -7,12 +7,12 @@ import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import io.api.myasset.domain.character.entity.UserCharacter;
-import io.api.myasset.domain.character.exception.CharacterError;
-import io.api.myasset.global.exception.error.BusinessException;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import io.api.myasset.domain.character.entity.UserCharacter;
+import io.api.myasset.domain.character.exception.CharacterError;
+import io.api.myasset.domain.user.exception.UserError;
+import io.api.myasset.global.exception.error.BusinessException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -166,5 +166,31 @@ public class User {
         return linkedInstitutions.stream()
                 .filter(t -> t.getCategory() == InstitutionType.Category.CARD)
                 .toList();
+    }
+
+    // 승급 로직
+    public void addPoint(int amount) {
+        if (amount < 0) {
+            throw new BusinessException(UserError.INVALID_POINT_AMOUNT);
+        }
+        this.point += amount;
+        promoteTierIfEligible();
+    }
+
+    private void promoteTierIfEligible() {
+        while (true) {
+            Integer nextTierRequiredPoint = this.tier.getNextTierRequiredPoint();
+            UserTier nextTier = this.tier.next();
+
+            if (nextTierRequiredPoint == null || nextTier == null) {
+                return;
+            }
+
+            if (this.point < nextTierRequiredPoint) {
+                return;
+            }
+
+            this.tier = nextTier;
+        }
     }
 }

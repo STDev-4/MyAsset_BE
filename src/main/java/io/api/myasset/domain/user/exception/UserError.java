@@ -15,7 +15,8 @@ public enum UserError implements ErrorCode {
 	USER_NOT_FOUND("존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND, "U_003"),
 	INVALID_PASSWORD("아이디 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED, "U_004"),
 	INVALID_REFRESH_TOKEN("유효하지 않은 리프레시 토큰입니다.", HttpStatus.UNAUTHORIZED, "U_005"),
-	UNAUTHORIZED("인증된 사용자가 아닙니다.", HttpStatus.UNAUTHORIZED, "U_006");
+	UNAUTHORIZED("인증된 사용자가 아닙니다.", HttpStatus.UNAUTHORIZED, "U_006"),
+    INVALID_POINT_AMOUNT("유효하지 않은 포인트 금액입니다.", HttpStatus.BAD_REQUEST, "U_007");
 
 	private final String message;
 	private final HttpStatus status;

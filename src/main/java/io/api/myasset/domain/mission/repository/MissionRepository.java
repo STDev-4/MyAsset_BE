@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,4 +36,8 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
 
     // 오늘 완료한 미션 개수 조회
     int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
+
+    List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
+
+    int countByUserIdAndMissionDateAndStatusNot(Long userId, LocalDate missionDate, MissionStatus status);
 }
