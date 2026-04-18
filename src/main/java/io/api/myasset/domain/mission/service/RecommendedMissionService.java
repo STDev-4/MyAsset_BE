@@ -67,7 +67,7 @@ public class RecommendedMissionService {
 
 	private List<RecommendedMissionResponse> readCache(Long userId, LocalDate today) {
 		List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
-		if (cached == null || cached.isEmpty()) {
+		if (cached == null) {
 			return null;
 		}
 		return cached.stream()

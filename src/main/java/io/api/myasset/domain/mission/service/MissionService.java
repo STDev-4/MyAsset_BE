@@ -27,69 +27,55 @@ public class MissionService {
 	private final MissionJsonProvider missionJsonProvider;
 	private final MissionCacheService missionCacheService;
 
-	@Transactional
-	public MissionAcceptResponse acceptMission(Long userId, MissionAcceptRequest request) {
-		LocalDate today = LocalDate.now();
+    @Transactional
+    public MissionAcceptResponse acceptMission(Long userId, MissionAcceptRequest request) {
+        LocalDate today = LocalDate.now();
 
-		List<CachedRecommendedMission> cachedMissions = missionCacheService.getRecommendedMissionCache(userId, today);
+        List<CachedRecommendedMission> cachedMissions =
+                missionCacheService.getRecommendedMissionCache(userId, today);
 
-		if (cachedMissions == null || cachedMissions.isEmpty()) {
-			throw new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND);
-		}
+        if (cachedMissions == null || cachedMissions.isEmpty()) {
+            throw new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND);
+        }
 
-		if (missionRepository.existsAcceptedMission(userId, request.recommendationId())) {
-			throw new BusinessException(MissionError.MISSION_ALREADY_ACCEPTED);
-		}
+        if (missionRepository.existsAcceptedMission(userId, request.recommendationId())) {
+            throw new BusinessException(MissionError.MISSION_ALREADY_ACCEPTED);
+        }
 
-		CachedRecommendedMission selected = cachedMissions.stream()
-			.filter(item -> item.recommendationId().equals(request.recommendationId()))
-			.findFirst()
-			.orElseThrow(() -> new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND));
+        CachedRecommendedMission selected = cachedMissions.stream()
+                .filter(item -> item.recommendationId().equals(request.recommendationId()))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(MissionError.RECOMMENDED_MISSION_NOT_FOUND));
 
-		Mission mission = Mission.of(
-			userId,
-			selected.title(),
-			selected.description(),
-			selected.iconType(),
-			selected.rewardPoint(),
-			selected.expectedSavingAmount(),
-			missionJsonProvider.toJson(selected.behaviorInsights()),
-			missionJsonProvider.toJson(selected.statisticalReasons()),
-			selected.recommendationId());
+        Mission mission = Mission.of(
+                userId,
+                selected.title(),
+                selected.description(),
+                selected.iconType(),
+                selected.rewardPoint(),
+                selected.expectedSavingAmount(),
+                missionJsonProvider.toJson(selected.behaviorInsights()),
+                missionJsonProvider.toJson(selected.statisticalReasons()),
+                selected.recommendationId()
+        );
 
-		Mission savedMission = missionRepository.save(mission);
+        Mission savedMission = missionRepository.save(mission);
 
-		List<CachedRecommendedMission> remaining = cachedMissions.stream()
-			.filter(item -> !item.recommendationId().equals(request.recommendationId()))
-			.toList();
+        List<CachedRecommendedMission> remaining = cachedMissions.stream()
+                .filter(item -> !item.recommendationId().equals(request.recommendationId()))
+                .toList();
 
-		if (remaining.isEmpty()) {
-			missionCacheService.evictRecommendedMissionCache(userId, today);
-		} else {
-			missionCacheService.saveRecommendedMissionCache(userId, today, remaining);
-		}
+        missionCacheService.saveRecommendedMissionCache(userId, today, remaining);
 
-		return new MissionAcceptResponse(
-			savedMission.getId(),
-			savedMission.getTitle(),
-			savedMission.getDescription(),
-			savedMission.getIconType(),
-			savedMission.getRewardPoint(),
-			savedMission.getExpectedSavingAmount());
-	}
-
-	@Transactional(readOnly = true)
-	public List<TodayMissionResponse> getTodayMissions(Long userId) {
-		return missionRepository.findTodayMissions(userId, LocalDate.now()).stream()
-			.map(mission -> new TodayMissionResponse(
-				mission.getId(),
-				mission.getTitle(),
-				mission.getIconType(),
-				mission.getStatus().name(),
-				mission.getRewardPoint(),
-				mission.getAutoEvaluateAt()))
-			.toList();
-	}
+        return new MissionAcceptResponse(
+                savedMission.getId(),
+                savedMission.getTitle(),
+                savedMission.getDescription(),
+                savedMission.getIconType(),
+                savedMission.getRewardPoint(),
+                savedMission.getExpectedSavingAmount()
+        );
+    }
 
 	@Transactional(readOnly = true)
 	public MissionDetailResponse getMissionDetail(Long userId, Long missionId) {
