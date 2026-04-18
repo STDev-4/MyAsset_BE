@@ -15,9 +15,9 @@ public class MissionEvaluationScheduler {
 
 	private final MissionEvaluationService missionEvaluationService;
 
-	@Scheduled(cron = "0 0 8 * * *")
+	@Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
 	public void evaluateMissions() {
-		log.info("[MissionEvaluationScheduler] 오전 8시 자동 판정 시작");
+		log.info("[MissionEvaluationScheduler] 오전 5시 자동 판정 시작");
 		missionEvaluationService.evaluateExpiredMissions();
 	}
 }

@@ -1,13 +1,7 @@
 package io.api.myasset.domain.mission.service;
 
-import io.api.myasset.domain.mission.dto.CachedRecommendedMission;
-import io.api.myasset.domain.mission.dto.MissionAcceptRequest;
-import io.api.myasset.domain.mission.dto.MissionAcceptResponse;
-import io.api.myasset.domain.mission.dto.MissionDetailResponse;
-import io.api.myasset.domain.mission.dto.MissionStartResponse;
-import io.api.myasset.domain.mission.dto.TodayMissionResponse;
+import io.api.myasset.domain.mission.dto.*;
 import io.api.myasset.domain.mission.entity.Mission;
-import io.api.myasset.domain.mission.enums.MissionStatus;
 import io.api.myasset.domain.mission.exception.MissionError;
 import io.api.myasset.domain.mission.provider.MissionJsonProvider;
 import io.api.myasset.domain.mission.repository.MissionRepository;
@@ -23,12 +17,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MissionService {
 
-	private final MissionRepository missionRepository;
-	private final MissionJsonProvider missionJsonProvider;
-	private final MissionCacheService missionCacheService;
+    private final MissionRepository missionRepository;
+    private final MissionJsonProvider missionJsonProvider;
+    private final MissionCacheService missionCacheService;
 
     @Transactional
-    public MissionAcceptResponse acceptMission(Long userId, MissionAcceptRequest request) {
+    public MissionStartResponse startMission(Long userId, MissionStartRequest request) {
         LocalDate today = LocalDate.now();
 
         List<CachedRecommendedMission> cachedMissions =
@@ -59,6 +53,8 @@ public class MissionService {
                 selected.recommendationId()
         );
 
+        mission.start();
+
         Mission savedMission = missionRepository.save(mission);
 
         List<CachedRecommendedMission> remaining = cachedMissions.stream()
@@ -67,13 +63,10 @@ public class MissionService {
 
         missionCacheService.saveRecommendedMissionCache(userId, today, remaining);
 
-        return new MissionAcceptResponse(
+        return new MissionStartResponse(
                 savedMission.getId(),
-                savedMission.getTitle(),
-                savedMission.getDescription(),
-                savedMission.getIconType(),
-                savedMission.getRewardPoint(),
-                savedMission.getExpectedSavingAmount()
+                savedMission.getStatus().name(),
+                savedMission.getStartedAt()
         );
     }
 
@@ -86,42 +79,27 @@ public class MissionService {
                         mission.getIconType(),
                         mission.getStatus().name(),
                         mission.getRewardPoint(),
+                        mission.getRewardPoint() / 2,
                         mission.getAutoEvaluateAt()
                 ))
                 .toList();
     }
 
-	@Transactional(readOnly = true)
-	public MissionDetailResponse getMissionDetail(Long userId, Long missionId) {
-		Mission mission = missionRepository.findByIdAndUserId(missionId, userId)
-			.orElseThrow(() -> new BusinessException(MissionError.MISSION_NOT_FOUND));
+    @Transactional(readOnly = true)
+    public MissionDetailResponse getMissionDetail(Long userId, Long missionId) {
+        Mission mission = missionRepository.findByIdAndUserId(missionId, userId)
+                .orElseThrow(() -> new BusinessException(MissionError.MISSION_NOT_FOUND));
 
-		return new MissionDetailResponse(
-			mission.getId(),
-			mission.getTitle(),
-			mission.getDescription(),
-			mission.getIconType(),
-			mission.getRewardPoint(),
-			mission.getExpectedSavingAmount(),
-			mission.getStatus().name(),
-			missionJsonProvider.toList(mission.getBehaviorInsightsJson()),
-			missionJsonProvider.toList(mission.getStatisticalReasonsJson()));
-	}
-
-	@Transactional
-	public MissionStartResponse startMission(Long userId, Long missionId) {
-		Mission mission = missionRepository.findByIdAndUserId(missionId, userId)
-			.orElseThrow(() -> new BusinessException(MissionError.MISSION_NOT_FOUND));
-
-		if (mission.getStatus() != MissionStatus.READY) {
-			throw new BusinessException(MissionError.INVALID_MISSION_STATUS);
-		}
-
-		mission.start();
-
-		return new MissionStartResponse(
-			mission.getId(),
-			mission.getStatus().name(),
-			mission.getStartedAt());
-	}
+        return new MissionDetailResponse(
+                mission.getId(),
+                mission.getTitle(),
+                mission.getDescription(),
+                mission.getIconType(),
+                mission.getRewardPoint(),
+                mission.getRewardPoint() / 2,
+                mission.getExpectedSavingAmount(),
+                mission.getStatus().name(),
+                missionJsonProvider.toList(mission.getBehaviorInsightsJson()),
+                missionJsonProvider.toList(mission.getStatisticalReasonsJson()));
+    }
 }
