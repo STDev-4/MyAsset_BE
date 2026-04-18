@@ -10,41 +10,78 @@ import io.api.myasset.domain.mission.dto.CachedRecommendedMission;
 import io.api.myasset.domain.mission.dto.GptRecommendedMissionResponse;
 import io.api.myasset.domain.mission.dto.RecommendedMissionResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecommendedMissionService {
 
 	private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+	private static final Duration GPT_LOCK_TTL = Duration.ofSeconds(60);
 
 	private final GptExecutor gptExecutor;
 	private final RecommendedMissionDomainPrompt recommendedMissionDomainPrompt;
 	private final MissionCacheService missionCacheService;
 	private final ApprovalService approvalService;
+	private final RedisTemplate<String, String> redisTemplate;
 
 	public List<RecommendedMissionResponse> getRecommendedMissions(Long userId) {
 		LocalDate today = LocalDate.now();
 
-		List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
-		if (cached != null && !cached.isEmpty()) {
-			return cached.stream()
-				.map(item -> new RecommendedMissionResponse(
-					item.recommendationId(),
-					item.title(),
-					item.description(),
-					item.iconType(),
-					item.rewardPoint(),
-					item.expectedSavingAmount()))
-				.toList();
+		// 1단계: 캐시 hit
+		List<RecommendedMissionResponse> cached = readCache(userId, today);
+		if (cached != null) {
+			return cached;
 		}
 
+		// 2단계: 분산 락 획득 시도
+		String lockKey = "lock:gpt:recommended-missions:" + userId;
+		Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", GPT_LOCK_TTL);
+		if (!Boolean.TRUE.equals(acquired)) {
+			log.info("[RecommendedMission] 동시 GPT 요청 감지, 빈 응답 반환 - userId={} (FE 가 재시도)", userId);
+			return Collections.emptyList();
+		}
+
+		try {
+			// 락 획득 후 race 방지 double-check
+			cached = readCache(userId, today);
+			if (cached != null) {
+				return cached;
+			}
+			return generateAndSave(userId, today);
+		} finally {
+			redisTemplate.delete(lockKey);
+		}
+	}
+
+	private List<RecommendedMissionResponse> readCache(Long userId, LocalDate today) {
+		List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
+		if (cached == null || cached.isEmpty()) {
+			return null;
+		}
+		return cached.stream()
+			.map(item -> new RecommendedMissionResponse(
+				item.recommendationId(),
+				item.title(),
+				item.description(),
+				item.iconType(),
+				item.rewardPoint(),
+				item.expectedSavingAmount()))
+			.toList();
+	}
+
+	private List<RecommendedMissionResponse> generateAndSave(Long userId, LocalDate today) {
 		String endDate = YearMonth.now()
 			.minusMonths(1)
 			.atEndOfMonth()
