@@ -47,6 +47,6 @@ openai:
 
 aws:
   s3:
-    enabled: ${AWS_S3_ENABLED:true} # local에서는 false로 변경 바람
+    enabled: ${AWS_S3_ENABLED:false} # local에서는 false로 변경 바람
     bucket: ${AWS_S3_BUCKET}
     region: ${AWS_S3_REGION}

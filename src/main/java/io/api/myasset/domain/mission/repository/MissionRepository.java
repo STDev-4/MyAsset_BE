@@ -31,11 +31,13 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
             """)
     boolean existsAcceptedMission(Long userId, String recommendationId);
 
-    List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
-
+    // 오늘 전체 미션 개수 조회
     int countByUserIdAndMissionDate(Long userId, LocalDate missionDate);
 
+    // 오늘 완료한 미션 개수 조회
     int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
+
+    List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
 
     int countByUserIdAndMissionDateAndStatusNot(Long userId, LocalDate missionDate, MissionStatus status);
 }
