@@ -65,11 +65,7 @@ public class MissionService {
                 .filter(item -> !item.recommendationId().equals(request.recommendationId()))
                 .toList();
 
-        if (remaining.isEmpty()) {
-            missionCacheService.evictRecommendedMissionCache(userId, today);
-        } else {
-            missionCacheService.saveRecommendedMissionCache(userId, today, remaining);
-        }
+        missionCacheService.saveRecommendedMissionCache(userId, today, remaining);
 
         return new MissionAcceptResponse(
                 savedMission.getId(),
