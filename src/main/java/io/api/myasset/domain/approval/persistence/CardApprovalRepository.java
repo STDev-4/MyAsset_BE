@@ -10,4 +10,6 @@ public interface CardApprovalRepository extends JpaRepository<CardApproval, Long
 		String connectedId,
 		String startDate,
 		String endDate);
+    //하루치 판정
+    List<CardApproval> findByConnectedIdAndApprovalDate(String connectedId, String approvalDate);
 }

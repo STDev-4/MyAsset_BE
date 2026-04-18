@@ -135,4 +135,11 @@ public class Mission {
         this.status = MissionStatus.IN_PROGRESS;
         this.startedAt = LocalDateTime.now();
     }
+    public void completeSuccess() {
+        this.status = MissionStatus.COMPLETED;
+    }
+
+    public void completeFail() {
+        this.status = MissionStatus.FAILED;
+    }
 }

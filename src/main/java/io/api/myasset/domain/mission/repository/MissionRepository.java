@@ -1,10 +1,12 @@
 package io.api.myasset.domain.mission.repository;
 
 import io.api.myasset.domain.mission.entity.Mission;
+import io.api.myasset.domain.mission.enums.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,4 +30,12 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
               and m.recommendationId = :recommendationId
             """)
     boolean existsAcceptedMission(Long userId, String recommendationId);
+
+    List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
+
+    int countByUserIdAndMissionDate(Long userId, LocalDate missionDate);
+
+    int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
+
+    int countByUserIdAndMissionDateAndStatusNot(Long userId, LocalDate missionDate, MissionStatus status);
 }
