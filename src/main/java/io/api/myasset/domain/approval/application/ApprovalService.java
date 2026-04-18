@@ -2,7 +2,6 @@ package io.api.myasset.domain.approval.application;
 
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -43,11 +42,10 @@ public class ApprovalService {
 	private static final DateTimeFormatter YEAR_MONTH_DASH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 
 	/**
-	 * AnalysisPage 도넛 차트 가독성 기준 상위 N 개만 개별 노출.
-	 * 초과분은 "기타" 로 합산. FE 디자인 (5 + 기타 = 6 조각) 에 맞춤.
+	 * AnalysisPage 도넛 차트 가독성 기준 상위 N 개만 노출.
+	 * 나머지는 응답에서 제외한다 (FE 가 직접 "기타" 같은 별도 항목을 처리하지 않도록).
 	 */
 	private static final int TOP_CATEGORY_LIMIT = 5;
-	private static final String OTHERS_LABEL = "기타";
 
 	private final CardApprovalRepository cardApprovalRepository;
 	private final UserRepository userRepository;
@@ -124,7 +122,7 @@ public class ApprovalService {
 			.sorted(Comparator.comparingLong(SpendResponse.CategorySpending::amount).reversed())
 			.toList();
 
-		List<SpendResponse.CategorySpending> categories = collapseToTopWithOthers(allSorted);
+		List<SpendResponse.CategorySpending> categories = takeTop(allSorted);
 
 		return new SpendResponse(
 			currentMonth.format(YEAR_MONTH_DASH_FORMAT),
@@ -132,28 +130,15 @@ public class ApprovalService {
 	}
 
 	/**
-	 * 금액 내림차순으로 정렬된 카테고리 리스트를 받아 Top N 개만 개별 노출하고
-	 * 나머지는 "기타" 로 합산한다. N 개 이하면 그대로 반환.
-	 * <p>
-	 * 도넛 차트 가독성 유지 + 네트워크 페이로드 최소화 목적.
+	 * 금액 내림차순으로 정렬된 카테고리 리스트에서 상위 N 개만 반환한다.
+	 * N 개 이하면 그대로 반환. "기타" 같은 합산 항목은 만들지 않는다.
 	 */
-	private List<SpendResponse.CategorySpending> collapseToTopWithOthers(
+	private List<SpendResponse.CategorySpending> takeTop(
 		List<SpendResponse.CategorySpending> sorted) {
 		if (sorted.size() <= TOP_CATEGORY_LIMIT) {
 			return sorted;
 		}
-
-		List<SpendResponse.CategorySpending> result = new ArrayList<>(
-			sorted.subList(0, TOP_CATEGORY_LIMIT));
-
-		long othersSum = sorted.subList(TOP_CATEGORY_LIMIT, sorted.size()).stream()
-			.mapToLong(SpendResponse.CategorySpending::amount)
-			.sum();
-
-		if (othersSum > 0) {
-			result.add(new SpendResponse.CategorySpending(OTHERS_LABEL, othersSum));
-		}
-		return result;
+		return List.copyOf(sorted.subList(0, TOP_CATEGORY_LIMIT));
 	}
 
 	/**
