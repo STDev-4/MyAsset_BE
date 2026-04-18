@@ -18,128 +18,127 @@ import java.time.LocalDateTime;
 @Table(name = "mission")
 public class Mission {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name="user_id", nullable = false)
-    private Long userId;
+	@Column(name = "user_id", nullable = false)
+	private Long userId;
 
-    @Column(nullable = false, length = 100)
-    private String title;
+	@Column(nullable = false, length = 100)
+	private String title;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String description;
+	@Column(nullable = false, columnDefinition = "TEXT")
+	private String description;
 
-    @Column(name = "icon_type", nullable = false, length = 30)
-    private String iconType;
+	@Column(name = "icon_type", nullable = false, length = 30)
+	private String iconType;
 
-    @Column(name = "reward_point", nullable = false)
-    private Integer rewardPoint;
+	@Column(name = "reward_point", nullable = false)
+	private Integer rewardPoint;
 
-    @Column(name = "expected_saving_amount", nullable = false)
-    private Integer expectedSavingAmount;
+	@Column(name = "expected_saving_amount", nullable = false)
+	private Integer expectedSavingAmount;
 
-    @Column(name = "behavior_insights_json", nullable = false, columnDefinition = "TEXT")
-    private String behaviorInsightsJson;
+	@Column(name = "behavior_insights_json", nullable = false, columnDefinition = "TEXT")
+	private String behaviorInsightsJson;
 
-    @Column(name = "statistical_reasons_json", nullable = false, columnDefinition = "TEXT")
-    private String statisticalReasonsJson;
+	@Column(name = "statistical_reasons_json", nullable = false, columnDefinition = "TEXT")
+	private String statisticalReasonsJson;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private MissionStatus status;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private MissionStatus status;
 
-    @Column(name = "mission_date", nullable = false)
-    private LocalDate missionDate;
+	@Column(name = "mission_date", nullable = false)
+	private LocalDate missionDate;
 
-    @Column(name = "started_at")
-    private LocalDateTime startedAt;
+	@Column(name = "started_at")
+	private LocalDateTime startedAt;
 
-    @Column(name = "auto_evaluate_at", nullable = false)
-    private LocalDateTime autoEvaluateAt;
+	@Column(name = "auto_evaluate_at", nullable = false)
+	private LocalDateTime autoEvaluateAt;
 
-    @Column(name = "recommendation_id", nullable = false, length = 100)
-    private String recommendationId;
+	@Column(name = "recommendation_id", nullable = false, length = 100)
+	private String recommendationId;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+	@CreationTimestamp
+	@Column(name = "created_at", nullable = false, updatable = false)
+	private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+	@UpdateTimestamp
+	@Column(name = "updated_at", nullable = false)
+	private LocalDateTime updatedAt;
 
-    @Builder(builderMethodName = "internalBuilder")
-    private Mission(
-            Long userId,
-            String title,
-            String description,
-            String iconType,
-            Integer rewardPoint,
-            Integer expectedSavingAmount,
-            String behaviorInsightsJson,
-            String statisticalReasonsJson,
-            MissionStatus status,
-            LocalDate missionDate,
-            LocalDateTime startedAt,
-            LocalDateTime autoEvaluateAt,
-            String recommendationId
-    ) {
-        this.userId = userId;
-        this.title = title;
-        this.description = description;
-        this.iconType = iconType;
-        this.rewardPoint = rewardPoint;
-        this.expectedSavingAmount = expectedSavingAmount;
-        this.behaviorInsightsJson = behaviorInsightsJson;
-        this.statisticalReasonsJson = statisticalReasonsJson;
-        this.status = status;
-        this.missionDate = missionDate;
-        this.startedAt = startedAt;
-        this.autoEvaluateAt = autoEvaluateAt;
-        this.recommendationId = recommendationId;
-    }
+	@Builder(builderMethodName = "internalBuilder")
+	private Mission(
+		Long userId,
+		String title,
+		String description,
+		String iconType,
+		Integer rewardPoint,
+		Integer expectedSavingAmount,
+		String behaviorInsightsJson,
+		String statisticalReasonsJson,
+		MissionStatus status,
+		LocalDate missionDate,
+		LocalDateTime startedAt,
+		LocalDateTime autoEvaluateAt,
+		String recommendationId) {
+		this.userId = userId;
+		this.title = title;
+		this.description = description;
+		this.iconType = iconType;
+		this.rewardPoint = rewardPoint;
+		this.expectedSavingAmount = expectedSavingAmount;
+		this.behaviorInsightsJson = behaviorInsightsJson;
+		this.statisticalReasonsJson = statisticalReasonsJson;
+		this.status = status;
+		this.missionDate = missionDate;
+		this.startedAt = startedAt;
+		this.autoEvaluateAt = autoEvaluateAt;
+		this.recommendationId = recommendationId;
+	}
 
-    public static Mission of(
-            Long userId,
-            String title,
-            String description,
-            String iconType,
-            Integer rewardPoint,
-            Integer expectedSavingAmount,
-            String behaviorInsightsJson,
-            String statisticalReasonsJson,
-            String recommendationId
-    ) {
-        LocalDate today = LocalDate.now();
+	public static Mission of(
+		Long userId,
+		String title,
+		String description,
+		String iconType,
+		Integer rewardPoint,
+		Integer expectedSavingAmount,
+		String behaviorInsightsJson,
+		String statisticalReasonsJson,
+		String recommendationId) {
+		LocalDate today = LocalDate.now();
 
-        return Mission.internalBuilder()
-                .userId(userId)
-                .title(title)
-                .description(description)
-                .iconType(iconType)
-                .rewardPoint(rewardPoint)
-                .expectedSavingAmount(expectedSavingAmount)
-                .behaviorInsightsJson(behaviorInsightsJson)
-                .statisticalReasonsJson(statisticalReasonsJson)
-                .status(MissionStatus.READY)
-                .missionDate(today)
-                .startedAt(null)
-                .autoEvaluateAt(today.atTime(23, 59, 59))
-                .recommendationId(recommendationId)
-                .build();
-    }
+		return Mission.internalBuilder()
+			.userId(userId)
+			.title(title)
+			.description(description)
+			.iconType(iconType)
+			.rewardPoint(rewardPoint)
+			.expectedSavingAmount(expectedSavingAmount)
+			.behaviorInsightsJson(behaviorInsightsJson)
+			.statisticalReasonsJson(statisticalReasonsJson)
+			.status(MissionStatus.READY)
+			.missionDate(today)
+			.startedAt(null)
+			.autoEvaluateAt(today.atTime(23, 59, 59))
+			.recommendationId(recommendationId)
+			.build();
+	}
 
-    public void start() {
-        this.status = MissionStatus.IN_PROGRESS;
-        this.startedAt = LocalDateTime.now();
-    }
-    public void completeSuccess() {
-        this.status = MissionStatus.COMPLETED;
-    }
+	public void start() {
+		this.status = MissionStatus.IN_PROGRESS;
+		this.startedAt = LocalDateTime.now();
+	}
 
-    public void completeFail() {
-        this.status = MissionStatus.FAILED;
-    }
+	public void completeSuccess() {
+		this.status = MissionStatus.COMPLETED;
+	}
+
+	public void completeFail() {
+		this.status = MissionStatus.FAILED;
+	}
 }

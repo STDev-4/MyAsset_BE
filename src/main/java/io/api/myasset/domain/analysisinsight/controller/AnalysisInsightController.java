@@ -16,11 +16,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnalysisInsightController {
 
-    private final AnalysisInsightService analysisInsightService;
+	private final AnalysisInsightService analysisInsightService;
 
-    @GetMapping("/insights")
-    public ResponseEntity<List<AnalysisInsightItemResponse>> getInsights() {
-        Long userId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(analysisInsightService.getInsights(userId));
-    }
+	@GetMapping("/insights")
+	public ResponseEntity<List<AnalysisInsightItemResponse>> getInsights() {
+		Long userId = SecurityUtil.getCurrentUserId();
+		return ResponseEntity.ok(analysisInsightService.getInsights(userId));
+	}
 }

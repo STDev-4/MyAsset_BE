@@ -15,21 +15,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JsonListConverter {
 
-    private final ObjectMapper objectMapper;
+	private final ObjectMapper objectMapper;
 
-    public List<String> toList(String json) {
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(AnalysisError.ACTION_TIPS_JSON_PARSE_ERROR);
-        }
-    }
+	public List<String> toList(String json) {
+		try {
+			return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+		} catch (JsonProcessingException e) {
+			throw new BusinessException(AnalysisError.ACTION_TIPS_JSON_PARSE_ERROR);
+		}
+	}
 
-    public String toJson(List<String> values) {
-        try {
-            return objectMapper.writeValueAsString(values);
-        } catch (JsonProcessingException e) {
-            throw new BusinessException(AnalysisError.ACTION_TIPS_JSON_SERIALIZE_ERROR);
-        }
-    }
+	public String toJson(List<String> values) {
+		try {
+			return objectMapper.writeValueAsString(values);
+		} catch (JsonProcessingException e) {
+			throw new BusinessException(AnalysisError.ACTION_TIPS_JSON_SERIALIZE_ERROR);
+		}
+	}
 }

@@ -14,31 +14,30 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class MissionCacheService {
 
-    private final RedisTemplate<String, String> redisTemplate;
-    private final MissionJsonProvider missionJsonProvider;
+	private final RedisTemplate<String, String> redisTemplate;
+	private final MissionJsonProvider missionJsonProvider;
 
-    private String recommendedMissionKey(Long userId, LocalDate date) {
-        return "mission:recommended:" + userId + ":" + date.toString().replace("-", "");
-    }
+	private String recommendedMissionKey(Long userId, LocalDate date) {
+		return "mission:recommended:" + userId + ":" + date.toString().replace("-", "");
+	}
 
-    public List<CachedRecommendedMission> getRecommendedMissionCache(Long userId, LocalDate date) {
-        String value = redisTemplate.opsForValue().get(recommendedMissionKey(userId, date));
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return missionJsonProvider.toRecommendedMissionList(value);
-    }
+	public List<CachedRecommendedMission> getRecommendedMissionCache(Long userId, LocalDate date) {
+		String value = redisTemplate.opsForValue().get(recommendedMissionKey(userId, date));
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return missionJsonProvider.toRecommendedMissionList(value);
+	}
 
-    public void saveRecommendedMissionCache(Long userId, LocalDate date, List<CachedRecommendedMission> missions) {
-        redisTemplate.opsForValue().set(
-                recommendedMissionKey(userId, date),
-                missionJsonProvider.toRecommendedMissionJson(missions),
-                1,
-                TimeUnit.DAYS
-        );
-    }
+	public void saveRecommendedMissionCache(Long userId, LocalDate date, List<CachedRecommendedMission> missions) {
+		redisTemplate.opsForValue().set(
+			recommendedMissionKey(userId, date),
+			missionJsonProvider.toRecommendedMissionJson(missions),
+			1,
+			TimeUnit.DAYS);
+	}
 
-    public void evictRecommendedMissionCache(Long userId, LocalDate date) {
-        redisTemplate.delete(recommendedMissionKey(userId, date));
-    }
+	public void evictRecommendedMissionCache(Long userId, LocalDate date) {
+		redisTemplate.delete(recommendedMissionKey(userId, date));
+	}
 }

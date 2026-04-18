@@ -9,12 +9,12 @@ import java.util.List;
 
 public interface AnalysisInsightRepository extends JpaRepository<AnalysisInsight, Long> {
 
-    @Query("""
-            select ai
-            from AnalysisInsight ai
-            where ai.userId = :userId
-              and ai.insightDate = :insightDate
-            order by ai.createdAt desc
-            """)
-    List<AnalysisInsight> findTodayInsights(Long userId, LocalDate insightDate);
+	@Query("""
+		select ai
+		from AnalysisInsight ai
+		where ai.userId = :userId
+		  and ai.insightDate = :insightDate
+		order by ai.createdAt desc
+		""")
+	List<AnalysisInsight> findTodayInsights(Long userId, LocalDate insightDate);
 }

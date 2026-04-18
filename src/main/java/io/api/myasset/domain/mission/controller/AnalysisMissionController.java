@@ -16,11 +16,11 @@ import java.util.List;
 @RequestMapping("/api/analysis")
 public class AnalysisMissionController {
 
-    private final RecommendedMissionService recommendedMissionService;
+	private final RecommendedMissionService recommendedMissionService;
 
-    @GetMapping("/recommended-missions")
-    public ResponseEntity<List<RecommendedMissionResponse>> getRecommendedMissions() {
-        Long userId = SecurityUtil.getCurrentUserId();
-        return ResponseEntity.ok(recommendedMissionService.getRecommendedMissions(userId));
-    }
+	@GetMapping("/recommended-missions")
+	public ResponseEntity<List<RecommendedMissionResponse>> getRecommendedMissions() {
+		Long userId = SecurityUtil.getCurrentUserId();
+		return ResponseEntity.ok(recommendedMissionService.getRecommendedMissions(userId));
+	}
 }
