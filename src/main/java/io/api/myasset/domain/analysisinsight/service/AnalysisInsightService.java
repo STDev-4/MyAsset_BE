@@ -12,19 +12,27 @@ import io.api.myasset.domain.gpt.prompt.DataPrompt;
 import io.api.myasset.domain.gpt.prompt.PromptTemplate;
 import io.api.myasset.domain.gpt.prompt.analysis.AnalysisInsightDomainPrompt;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnalysisInsightService {
 
 	private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+	/** GPT 중복 호출 방지용 락 TTL. GPT 가 응답하는 데 걸리는 최대 시간 + 여유. */
+	private static final Duration GPT_LOCK_TTL = Duration.ofSeconds(60);
 
 	private final AnalysisInsightRepository analysisInsightRepository;
 	private final JsonListConverter jsonListConverter;
@@ -32,31 +40,67 @@ public class AnalysisInsightService {
 	private final AnalysisInsightDomainPrompt analysisInsightDomainPrompt;
 	private final AnalysisInsightCacheService analysisInsightCacheService;
 	private final ApprovalService approvalService;
+	private final RedisTemplate<String, String> redisTemplate;
 
 	@Transactional
 	public List<AnalysisInsightItemResponse> getInsights(Long userId) {
 		LocalDate today = LocalDate.now();
 
+		// 1단계: Redis 캐시 hit
 		List<AnalysisInsightItemResponse> cached = analysisInsightCacheService.getInsights(userId, today);
 		if (cached != null && !cached.isEmpty()) {
 			return cached;
 		}
 
-		List<AnalysisInsight> savedInsights = analysisInsightRepository.findTodayInsights(userId, today);
-		if (!savedInsights.isEmpty()) {
-			List<AnalysisInsightItemResponse> responses = savedInsights.stream()
-				.map(insight -> new AnalysisInsightItemResponse(
-					insight.getId(),
-					insight.getTitle(),
-					insight.getDescription(),
-					insight.getColorType(),
-					jsonListConverter.toList(insight.getActionTipsJson())))
-				.toList();
-
-			analysisInsightCacheService.saveInsights(userId, today, responses);
-			return responses;
+		// 2단계: DB 에 오늘자 데이터가 있으면 캐시에 태우고 반환
+		List<AnalysisInsightItemResponse> fromDb = loadFromDbIfPresent(userId, today);
+		if (fromDb != null) {
+			return fromDb;
 		}
 
+		// 3단계: 분산 락 획득 시도 (SETNX). 못 잡으면 다른 요청이 생성 중.
+		String lockKey = "lock:gpt:insights:" + userId;
+		Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", GPT_LOCK_TTL);
+		if (!Boolean.TRUE.equals(acquired)) {
+			log.info("[AnalysisInsight] 동시 GPT 요청 감지, 빈 응답 반환 - userId={} (FE 가 재시도)", userId);
+			return Collections.emptyList();
+		}
+
+		try {
+			// 락 획득 후 캐시/DB 재확인 (race: 직전에 다른 요청이 끝냈을 수 있음)
+			cached = analysisInsightCacheService.getInsights(userId, today);
+			if (cached != null && !cached.isEmpty()) {
+				return cached;
+			}
+			fromDb = loadFromDbIfPresent(userId, today);
+			if (fromDb != null) {
+				return fromDb;
+			}
+
+			return generateAndSave(userId, today);
+		} finally {
+			redisTemplate.delete(lockKey);
+		}
+	}
+
+	private List<AnalysisInsightItemResponse> loadFromDbIfPresent(Long userId, LocalDate today) {
+		List<AnalysisInsight> savedInsights = analysisInsightRepository.findTodayInsights(userId, today);
+		if (savedInsights.isEmpty()) {
+			return null;
+		}
+		List<AnalysisInsightItemResponse> responses = savedInsights.stream()
+			.map(insight -> new AnalysisInsightItemResponse(
+				insight.getId(),
+				insight.getTitle(),
+				insight.getDescription(),
+				insight.getColorType(),
+				jsonListConverter.toList(insight.getActionTipsJson())))
+			.toList();
+		analysisInsightCacheService.saveInsights(userId, today, responses);
+		return responses;
+	}
+
+	private List<AnalysisInsightItemResponse> generateAndSave(Long userId, LocalDate today) {
 		String endDate = YearMonth.now()
 			.minusMonths(1)
 			.atEndOfMonth()
