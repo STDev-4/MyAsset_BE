@@ -77,6 +77,20 @@ public class MissionService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<TodayMissionResponse> getTodayMissions(Long userId) {
+        return missionRepository.findTodayMissions(userId, LocalDate.now()).stream()
+                .map(mission -> new TodayMissionResponse(
+                        mission.getId(),
+                        mission.getTitle(),
+                        mission.getIconType(),
+                        mission.getStatus().name(),
+                        mission.getRewardPoint(),
+                        mission.getAutoEvaluateAt()
+                ))
+                .toList();
+    }
+
 	@Transactional(readOnly = true)
 	public MissionDetailResponse getMissionDetail(Long userId, Long missionId) {
 		Mission mission = missionRepository.findByIdAndUserId(missionId, userId)
