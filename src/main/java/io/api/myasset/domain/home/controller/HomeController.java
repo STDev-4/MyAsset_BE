@@ -15,19 +15,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class HomeController {
 
-    private final HomeService homeService;
+	private final HomeService homeService;
 
-    // 홈 요약 정보 조회
-    @GetMapping("/summary")
-    public HomeSummaryResponse getHomeSummary(Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
-        return homeService.getHomeSummary(userId);
-    }
+	// 홈 요약 정보 조회
+	@GetMapping("/summary")
+	public HomeSummaryResponse getHomeSummary(Authentication authentication) {
+		Long userId = (Long)authentication.getPrincipal();
+		return homeService.getHomeSummary(userId);
+	}
 
-    // 절약력 상위 퍼센트 조회
-    @GetMapping("/percentile")
-    public HomeRankingPercentileResponse getRankingPercentile(Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
-        return homeService.getRankingPercentile(userId);
-    }
+	// 절약력 상위 퍼센트 조회
+	@GetMapping("/percentile")
+	public HomeRankingPercentileResponse getRankingPercentile(Authentication authentication) {
+		Long userId = (Long)authentication.getPrincipal();
+		return homeService.getRankingPercentile(userId);
+	}
 }

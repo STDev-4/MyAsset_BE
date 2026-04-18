@@ -20,14 +20,14 @@ public class LeagueController {
 	private final LeagueService leagueService;
 
 	// 리그 랭킹 조회 API
-    @GetMapping("/ranking")
-    public LeagueRankingResponse getLeagueRanking(
-            Authentication authentication,
-            @RequestParam(defaultValue = "50") int size
-    ) {
-        Long userId = (Long) authentication.getPrincipal();
-        return leagueService.getLeagueRanking(userId, size);
-    }
+	@GetMapping("/ranking")
+	public LeagueRankingResponse getLeagueRanking(
+		Authentication authentication,
+		@RequestParam(defaultValue = "50")
+		int size) {
+		Long userId = (Long)authentication.getPrincipal();
+		return leagueService.getLeagueRanking(userId, size);
+	}
 
 	// 선택한 리그 랭킹 조회
 	@GetMapping("/selected")

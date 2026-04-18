@@ -12,32 +12,32 @@ import java.util.Optional;
 
 public interface MissionRepository extends JpaRepository<Mission, Long> {
 
-    @Query("""
-            select m
-            from Mission m
-            where m.userId = :userId
-              and m.missionDate = :missionDate
-            order by m.createdAt asc
-            """)
-    List<Mission> findTodayMissions(Long userId, LocalDate missionDate);
+	@Query("""
+		select m
+		from Mission m
+		where m.userId = :userId
+		  and m.missionDate = :missionDate
+		order by m.createdAt asc
+		""")
+	List<Mission> findTodayMissions(Long userId, LocalDate missionDate);
 
-    Optional<Mission> findByIdAndUserId(Long id, Long userId);
+	Optional<Mission> findByIdAndUserId(Long id, Long userId);
 
-    @Query("""
-            select case when count(m) > 0 then true else false end
-            from Mission m
-            where m.userId = :userId
-              and m.recommendationId = :recommendationId
-            """)
-    boolean existsAcceptedMission(Long userId, String recommendationId);
+	@Query("""
+		select case when count(m) > 0 then true else false end
+		from Mission m
+		where m.userId = :userId
+		  and m.recommendationId = :recommendationId
+		""")
+	boolean existsAcceptedMission(Long userId, String recommendationId);
 
-    // 오늘 전체 미션 개수 조회
-    int countByUserIdAndMissionDate(Long userId, LocalDate missionDate);
+	// 오늘 전체 미션 개수 조회
+	int countByUserIdAndMissionDate(Long userId, LocalDate missionDate);
 
-    // 오늘 완료한 미션 개수 조회
-    int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
+	// 오늘 완료한 미션 개수 조회
+	int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
 
-    List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
+	List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
 
-    int countByUserIdAndMissionDateAndStatusNot(Long userId, LocalDate missionDate, MissionStatus status);
+	int countByUserIdAndMissionDateAndStatusNot(Long userId, LocalDate missionDate, MissionStatus status);
 }

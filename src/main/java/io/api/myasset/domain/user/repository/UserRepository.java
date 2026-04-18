@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 
 import io.api.myasset.domain.user.entity.User;
 
-
 public interface UserRepository extends JpaRepository<User, Long> {
 
 	boolean existsByLoginId(String loginId);
@@ -18,7 +17,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	boolean existsByEmail(String email);
 
 	Optional<User> findByLoginId(String loginId);
-    
+
 	// 특정 티어 사용자 수 조회
 	long countByTier(UserTier tier);
 

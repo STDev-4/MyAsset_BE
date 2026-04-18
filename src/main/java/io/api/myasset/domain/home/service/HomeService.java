@@ -22,91 +22,89 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class HomeService {
 
-    private final UserRepository userRepository;
-    private final MissionRepository missionRepository;
+	private final UserRepository userRepository;
+	private final MissionRepository missionRepository;
 
-    // 홈 요약 정보 조회
-    public HomeSummaryResponse getHomeSummary(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
+	// 홈 요약 정보 조회
+	public HomeSummaryResponse getHomeSummary(Long userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
 
-        LocalDate today = LocalDate.now();
+		LocalDate today = LocalDate.now();
 
-        int totalMissionCount = missionRepository.countByUserIdAndMissionDate(userId, today);
-        int completedMissionCount = missionRepository.countByUserIdAndMissionDateAndStatus(
-                userId,
-                today,
-                MissionStatus.COMPLETED
-        );
+		int totalMissionCount = missionRepository.countByUserIdAndMissionDate(userId, today);
+		int completedMissionCount = missionRepository.countByUserIdAndMissionDateAndStatus(
+			userId,
+			today,
+			MissionStatus.COMPLETED);
 
-        int successRate = calculateSuccessRate(totalMissionCount, completedMissionCount);
-        String currentImageName = extractCurrentImageName(user);
-        String currentImageUrl = extractCurrentImageUrl(user);
+		int successRate = calculateSuccessRate(totalMissionCount, completedMissionCount);
+		String currentImageName = extractCurrentImageName(user);
+		String currentImageUrl = extractCurrentImageUrl(user);
 
-        return HomeSummaryResponse.of(
-                currentImageName,
-                user.getTier().name(),
-                user.getPoint(),
-                currentImageUrl,
-                totalMissionCount,
-                completedMissionCount,
-                successRate
-        );
-    }
+		return HomeSummaryResponse.of(
+			currentImageName,
+			user.getTier().name(),
+			user.getPoint(),
+			currentImageUrl,
+			totalMissionCount,
+			completedMissionCount,
+			successRate);
+	}
 
-    // 성공률 계산
-    private int calculateSuccessRate(int totalMissionCount, int completedMissionCount) {
-        if (totalMissionCount == 0) {
-            return 0;
-        }
+	// 성공률 계산
+	private int calculateSuccessRate(int totalMissionCount, int completedMissionCount) {
+		if (totalMissionCount == 0) {
+			return 0;
+		}
 
-        return (int)Math.round((double)completedMissionCount * 100 / totalMissionCount);
-    }
+		return (int)Math.round((double)completedMissionCount * 100 / totalMissionCount);
+	}
 
-    // 현재 활성화된 캐릭터 이름 조회
-    private String extractCurrentImageName(User user) {
-        return user.getUserCharacters().stream()
-                .filter(UserCharacter::isActive)
-                .findFirst()
-                .map(userCharacter -> userCharacter.getCharacter().getName())
-                .orElse(null);
-    }
+	// 현재 활성화된 캐릭터 이름 조회
+	private String extractCurrentImageName(User user) {
+		return user.getUserCharacters().stream()
+			.filter(UserCharacter::isActive)
+			.findFirst()
+			.map(userCharacter -> userCharacter.getCharacter().getName())
+			.orElse(null);
+	}
 
-    // 현재 활성화된 캐릭터 이미지 URL 조회
-    private String extractCurrentImageUrl(User user) {
-        return user.getUserCharacters().stream()
-                .filter(UserCharacter::isActive)
-                .findFirst()
-                .map(userCharacter -> userCharacter.getCharacter().getImageUrl())
-                .orElse(null);
-    }
+	// 현재 활성화된 캐릭터 이미지 URL 조회
+	private String extractCurrentImageUrl(User user) {
+		return user.getUserCharacters().stream()
+			.filter(UserCharacter::isActive)
+			.findFirst()
+			.map(userCharacter -> userCharacter.getCharacter().getImageUrl())
+			.orElse(null);
+	}
 
-    // 절약력 상위 퍼센트 조회
-    public HomeRankingPercentileResponse getRankingPercentile(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
+	// 절약력 상위 퍼센트 조회
+	public HomeRankingPercentileResponse getRankingPercentile(Long userId) {
+		User user = userRepository.findById(userId)
+			.orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
 
-        Integer myPoint = user.getPoint();
-        long totalUserCount = userRepository.count();
+		Integer myPoint = user.getPoint();
+		long totalUserCount = userRepository.count();
 
-        if (totalUserCount == 0) {
-            return HomeRankingPercentileResponse.builder()
-                    .rankingPercentile("0.0")
-                    .measuredAt(LocalDate.now())
-                    .build();
-        }
+		if (totalUserCount == 0) {
+			return HomeRankingPercentileResponse.builder()
+				.rankingPercentile("0.0")
+				.measuredAt(LocalDate.now())
+				.build();
+		}
 
-        long higherUserCount = userRepository.countByPointGreaterThan(myPoint);
-        long rank = higherUserCount + 1;
+		long higherUserCount = userRepository.countByPointGreaterThan(myPoint);
+		long rank = higherUserCount + 1;
 
-        double calculatedPercentile = (((double)rank - 0.5) * 100) / totalUserCount;
-        calculatedPercentile = Math.round(calculatedPercentile * 10) / 10.0;
+		double calculatedPercentile = (((double)rank - 0.5) * 100) / totalUserCount;
+		calculatedPercentile = Math.round(calculatedPercentile * 10) / 10.0;
 
-        String rankingPercentile = String.format(Locale.US, "%.1f", calculatedPercentile);
+		String rankingPercentile = String.format(Locale.US, "%.1f", calculatedPercentile);
 
-        return HomeRankingPercentileResponse.builder()
-                .rankingPercentile(rankingPercentile)
-                .measuredAt(LocalDate.now())
-                .build();
-    }
+		return HomeRankingPercentileResponse.builder()
+			.rankingPercentile(rankingPercentile)
+			.measuredAt(LocalDate.now())
+			.build();
+	}
 }
