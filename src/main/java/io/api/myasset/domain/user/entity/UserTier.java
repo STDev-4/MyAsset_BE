@@ -17,9 +17,10 @@ public enum UserTier {
 	private final String label; // 화면 표시용 (DB 저장 금지)
 	private final Integer nextTierRequiredPoint;
 
-	public UserTier next() {
-		UserTier[] values = UserTier.values();
-		int ordinal = this.ordinal();
-		return (ordinal < values.length - 1) ? values[ordinal + 1] : null;
-	}
+    // 다음 티어 반환 (마지막이면 null)
+    public UserTier next() {
+        UserTier[] values = UserTier.values();
+        int ordinal = this.ordinal();
+        return (ordinal < values.length - 1) ? values[ordinal + 1] : null;
+    }
 }
