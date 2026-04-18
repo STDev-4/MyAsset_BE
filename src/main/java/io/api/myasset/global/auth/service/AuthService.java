@@ -20,8 +20,6 @@ import io.api.myasset.global.exception.error.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDateTime;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -58,23 +56,20 @@ public class AuthService {
 			request.nickname(),
 			request.birthDate());
 
+		user.updateLastLoginAt();
 
-        user.updateLastLoginAt(LocalDateTime.now());
-
-        User saved = userRepository.save(user);
-        TokenPair tokens = issueTokens(saved);
-
+		User saved = userRepository.save(user);
+		TokenPair tokens = issueTokens(saved);
 
 		// 기본 캐릭터(coinPrice=0) 배정 — 캐릭터가 없으면 스킵
 		characterRepository.findFirstByCoinPrice(0)
 			.map(character -> UserCharacter.assignDefault(saved, character))
 			.ifPresent(userCharacterRepository::save);
 
-
 		return new SignupResult(SignupResponse.from(saved), tokens);
 	}
 
-    @Transactional
+	@Transactional
 	public TokenPair login(LoginRequest request) {
 		User user = userRepository.findByLoginId(request.loginId())
 			.orElseThrow(() -> new BusinessException(UserError.INVALID_PASSWORD));
@@ -83,9 +78,9 @@ public class AuthService {
 			throw new BusinessException(UserError.INVALID_PASSWORD);
 		}
 
-        // 로그인 성공 시 lastLoginAt 갱신
-        user.updateLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
+		// 로그인 성공 시 lastLoginAt 갱신
+		user.updateLastLoginAt();
+		userRepository.save(user);
 
 		return issueTokens(user);
 	}
