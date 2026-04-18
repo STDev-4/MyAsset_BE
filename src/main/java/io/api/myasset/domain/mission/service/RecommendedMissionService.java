@@ -33,7 +33,7 @@ public class RecommendedMissionService {
         LocalDate today = LocalDate.now();
 
         List<CachedRecommendedMission> cached = missionCacheService.getRecommendedMissionCache(userId, today);
-        if (cached != null && !cached.isEmpty()) {
+        if (cached != null) {
             return cached.stream()
                     .map(item -> new RecommendedMissionResponse(
                             item.recommendationId(),
