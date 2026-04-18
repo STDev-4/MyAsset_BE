@@ -38,5 +38,5 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
 	int countByUserIdAndMissionDateAndStatus(Long userId, LocalDate missionDate, MissionStatus status);
 
 	List<Mission> findByStatusAndAutoEvaluateAtLessThanEqual(MissionStatus status, LocalDateTime time);
-    
+
 }

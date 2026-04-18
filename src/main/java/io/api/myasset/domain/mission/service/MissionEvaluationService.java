@@ -17,128 +17,157 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MissionEvaluationService {
 
-	private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-	private final MissionRepository missionRepository;
-	private final UserRepository userRepository;
-	private final CardApprovalRepository cardApprovalRepository;
+    private static final Set<String> COFFEE_TYPES = Set.of(
+            "커피전문점"
+    );
 
-	@Transactional
-	public void evaluateExpiredMissions() {
-		LocalDateTime now = LocalDateTime.now();
+    private static final Set<String> TAXI_TYPES = Set.of(
+            "택시"
+    );
 
-		List<Mission> targets = missionRepository.findByStatusAndAutoEvaluateAtLessThanEqual(
-			MissionStatus.IN_PROGRESS,
-			now);
+    private static final Set<String> CONVENIENCE_TYPES = Set.of(
+            "편의점"
+    );
 
-		log.info("[MissionEvaluation] 자동 판정 시작 - targetCount={}", targets.size());
+    private static final Set<String> FOOD_TYPES = Set.of(
+            "일반음식점",
+            "배달의민족",
+            "패스트푸드점",
+            "일식전문점",
+            "치킨전문점",
+            "일반주점",
+            "제과 제빵",
+            "아이스크림전문",
+            "기타식음료품"
+    );
 
-		for (Mission mission : targets) {
-			evaluateOne(mission);
-		}
+    private final MissionRepository missionRepository;
+    private final UserRepository userRepository;
+    private final CardApprovalRepository cardApprovalRepository;
 
-		log.info("[MissionEvaluation] 자동 판정 종료");
-	}
+    @Transactional
+    public void evaluateExpiredMissions() {
+        LocalDateTime now = LocalDateTime.now();
 
-	private void evaluateOne(Mission mission) {
-		User user = userRepository.findById(mission.getUserId())
-			.orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
+        List<Mission> targets = missionRepository.findByStatusAndAutoEvaluateAtLessThanEqual(
+                MissionStatus.IN_PROGRESS,
+                now
+        );
 
-		if (user.getConnectedId() == null || user.getConnectedId().isBlank()) {
-			log.warn("[MissionEvaluation] connectedId 없음 - missionId={}, userId={}", mission.getId(), user.getId());
-			mission.completeFail();
-			return;
-		}
+        log.info("[MissionEvaluation] 자동 판정 시작 - targetCount={}", targets.size());
 
-		String approvalDate = mission.getMissionDate().format(YYYYMMDD);
+        for (Mission mission : targets) {
+            evaluateOne(mission);
+        }
 
-		List<CardApproval> approvals = cardApprovalRepository.findByConnectedIdAndApprovalDate(
-			user.getConnectedId(),
-			approvalDate);
+        log.info("[MissionEvaluation] 자동 판정 종료");
+    }
 
-		boolean success = judge(mission, approvals);
+    private void evaluateOne(Mission mission) {
+        User user = userRepository.findById(mission.getUserId())
+                .orElseThrow(() -> new BusinessException(UserError.USER_NOT_FOUND));
 
-		if (success) {
-			mission.completeSuccess();
-			user.addPoint(mission.getRewardPoint());
-			log.info("[MissionEvaluation] 성공 - missionId={}, userId={}, rewardPoint={}",
-				mission.getId(), user.getId(), mission.getRewardPoint());
-		} else {
-			mission.completeFail();
-			log.info("[MissionEvaluation] 실패 - missionId={}, userId={}", mission.getId(), user.getId());
-		}
-	}
+        if (user.getConnectedId() == null || user.getConnectedId().isBlank()) {
+            log.warn("[MissionEvaluation] connectedId 없음 - missionId={}, userId={}", mission.getId(), user.getId());
+            mission.completeFail();
 
-	private boolean judge(Mission mission, List<CardApproval> approvals) {
-		String title = normalize(mission.getTitle());
-		String description = normalize(mission.getDescription());
+            int penaltyPoint = mission.getRewardPoint() / 2;
+            user.subtractPoint(penaltyPoint);
 
-		if (containsAny(title, description, "커피", "카페")) {
-			return countByMerchant(approvals, "커피전문점") <= 1;
-		}
+            log.info("[MissionEvaluation] 실패(connectedId 없음) - missionId={}, userId={}, penaltyPoint={}",
+                    mission.getId(), user.getId(), penaltyPoint);
+            return;
+        }
 
-		if (containsAny(title, description, "택시")) {
-			return countByMerchant(approvals, "택시") == 0;
-		}
+        String approvalDate = mission.getMissionDate().format(YYYYMMDD);
 
-		if (containsAny(title, description, "편의점")) {
-			return sumByMerchant(approvals, "편의점") <= 5000;
-		}
+        List<CardApproval> approvals = cardApprovalRepository.findByConnectedIdAndApprovalDate(
+                user.getConnectedId(),
+                approvalDate
+        );
 
-		if (containsAny(title, description, "배달", "치킨", "패스트푸드", "외식", "식비")) {
-			long foodTotal = sumByKeywords(approvals,
-				"일반음식점", "치킨전문점", "패스트푸드점", "일식전문점");
-			return foodTotal <= mission.getExpectedSavingAmount();
-		}
+        boolean success = judge(mission, approvals);
 
-		// 규칙을 모르겠으면 보수적으로 실패 처리
-		return false;
-	}
+        if (success) {
+            mission.completeSuccess();
+            user.addPoint(mission.getRewardPoint());
+            log.info("[MissionEvaluation] 성공 - missionId={}, userId={}, rewardPoint={}",
+                    mission.getId(), user.getId(), mission.getRewardPoint());
+        } else {
+            mission.completeFail();
 
-	private String normalize(String value) {
-		return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase();
-	}
+            int penaltyPoint = mission.getRewardPoint() / 2;
+            user.subtractPoint(penaltyPoint);
 
-	private boolean containsAny(String title, String description, String... keywords) {
-		for (String keyword : keywords) {
-			String k = keyword.replaceAll("\\s+", "").toLowerCase();
-			if (title.contains(k) || description.contains(k)) {
-				return true;
-			}
-		}
-		return false;
-	}
+            log.info("[MissionEvaluation] 실패 - missionId={}, userId={}, penaltyPoint={}",
+                    mission.getId(), user.getId(), penaltyPoint);
+        }
+    }
 
-	private long countByMerchant(List<CardApproval> approvals, String merchantType) {
-		return approvals.stream()
-			.filter(a -> merchantType.equals(a.getMerchantType()))
-			.count();
-	}
+    private boolean judge(Mission mission, List<CardApproval> approvals) {
+        String title = normalize(mission.getTitle());
+        String description = normalize(mission.getDescription());
 
-	private long sumByMerchant(List<CardApproval> approvals, String merchantType) {
-		return approvals.stream()
-			.filter(a -> merchantType.equals(a.getMerchantType()))
-			.mapToLong(CardApproval::getApprovalAmount)
-			.sum();
-	}
+        if (containsAny(title, description, "커피", "카페")) {
+            return countByTypes(approvals, COFFEE_TYPES) <= 1;
+        }
 
-	private long sumByKeywords(List<CardApproval> approvals, String... merchantTypes) {
-		return approvals.stream()
-			.filter(a -> {
-				for (String merchantType : merchantTypes) {
-					if (merchantType.equals(a.getMerchantType())) {
-						return true;
-					}
-				}
-				return false;
-			})
-			.mapToLong(CardApproval::getApprovalAmount)
-			.sum();
-	}
+        if (containsAny(title, description, "택시")) {
+            return countByTypes(approvals, TAXI_TYPES) == 0;
+        }
+
+        if (containsAny(title, description, "편의점")) {
+            return sumByTypes(approvals, CONVENIENCE_TYPES) <= 5000;
+        }
+
+        if (containsAny(title, description, "배달", "치킨", "패스트푸드", "외식", "식비")) {
+            long foodTotal = sumByTypes(approvals, FOOD_TYPES);
+            return foodTotal <= mission.getExpectedSavingAmount();
+        }
+
+        return false;
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase();
+    }
+
+    private boolean containsAny(String title, String description, String... keywords) {
+        for (String keyword : keywords) {
+            String k = normalize(keyword);
+            if (title.contains(k) || description.contains(k)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private long countByTypes(List<CardApproval> approvals, Set<String> targetTypes) {
+        return approvals.stream()
+                .filter(a -> matchesType(a.getMerchantType(), targetTypes))
+                .count();
+    }
+
+    private long sumByTypes(List<CardApproval> approvals, Set<String> targetTypes) {
+        return approvals.stream()
+                .filter(a -> matchesType(a.getMerchantType(), targetTypes))
+                .mapToLong(CardApproval::getApprovalAmount)
+                .sum();
+    }
+
+    private boolean matchesType(String merchantType, Set<String> targetTypes) {
+        String normalizedMerchantType = normalize(merchantType);
+        return targetTypes.stream()
+                .map(this::normalize)
+                .anyMatch(normalizedMerchantType::equals);
+    }
 }

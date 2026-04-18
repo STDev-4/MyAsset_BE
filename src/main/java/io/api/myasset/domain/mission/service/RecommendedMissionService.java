@@ -70,15 +70,16 @@ public class RecommendedMissionService {
 		if (cached == null) {
 			return null;
 		}
-		return cached.stream()
-			.map(item -> new RecommendedMissionResponse(
-				item.recommendationId(),
-				item.title(),
-				item.description(),
-				item.iconType(),
-				item.rewardPoint(),
-				item.expectedSavingAmount()))
-			.toList();
+        return cached.stream()
+                .map(item -> new RecommendedMissionResponse(
+                        item.recommendationId(),
+                        item.title(),
+                        item.description(),
+                        item.iconType(),
+                        item.rewardPoint(),
+                        item.rewardPoint() / 2,
+                        item.expectedSavingAmount()))
+                .toList();
 	}
 
 	private List<RecommendedMissionResponse> generateAndSave(Long userId, LocalDate today) {
@@ -115,15 +116,16 @@ public class RecommendedMissionService {
 
 		missionCacheService.saveRecommendedMissionCache(userId, today, cacheItems);
 
-		return cacheItems.stream()
-			.map(item -> new RecommendedMissionResponse(
-				item.recommendationId(),
-				item.title(),
-				item.description(),
-				item.iconType(),
-				item.rewardPoint(),
-				item.expectedSavingAmount()))
-			.toList();
+        return cacheItems.stream()
+                .map(item -> new RecommendedMissionResponse(
+                        item.recommendationId(),
+                        item.title(),
+                        item.description(),
+                        item.iconType(),
+                        item.rewardPoint(),
+                        item.rewardPoint() / 2,
+                        item.expectedSavingAmount()))
+                .toList();
 	}
 
 	private String buildSpendingDataPrompt(SpendingTopResponse topSpending) {
